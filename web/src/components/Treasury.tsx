@@ -1,0 +1,126 @@
+"use client"
+
+import { motion } from "framer-motion"
+import { Copy, Check } from "lucide-react"
+import { useState } from "react"
+
+export default function Treasury() {
+    const [copied, setCopied] = useState(false)
+    const address = "KeyFoundation7xK9...sol" // Placeholder
+
+    const handleCopy = () => {
+        navigator.clipboard.writeText(address)
+        setCopied(true)
+        setTimeout(() => setCopied(false), 2000)
+
+        // Quill scratch sound logic
+        try {
+            const audio = new Audio("/quill-scratch.mp3")
+            audio.play().catch(() => {
+                // Most browsers block auto-play without user interaction, 
+                // but here it is a user interaction (click).
+                // Silent fail if file missing.
+            })
+        } catch (e) {
+            // Audio not supported or other error
+        }
+    }
+
+    return (
+        <section className="treasury-section">
+            <div className="treasury-content">
+                <motion.h2
+                    className="accent"
+                    initial={{ opacity: 0, y: 20 }}
+                    whileInView={{ opacity: 1, y: 0 }}
+                    viewport={{ once: true }}
+                    transition={{ duration: 1 }}
+                >Support the Foundation.</motion.h2>
+
+                <motion.p
+                    className="subtitle"
+                    initial={{ opacity: 0 }}
+                    whileInView={{ opacity: 0.8 }}
+                    viewport={{ once: true }}
+                    transition={{ delay: 0.3, duration: 1 }}
+                >
+                    "The Key Foundation is a non-profit initiative to protect the right to whisper in a digital age. Direct contributions fuel the gas relayer and extend the network's lifespan."
+                </motion.p>
+
+                <div className="treasury-grid">
+                    <motion.div
+                        className="treasury-info"
+                        initial={{ opacity: 0, x: -30 }}
+                        whileInView={{ opacity: 1, x: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 0.8, delay: 0.5 }}
+                    >
+                        <div className="address-bar" onClick={handleCopy}>
+                            <span className="mono">{address}</span>
+                            {copied ? <Check size={16} className="signal" /> : <Copy size={16} className="copy-icon" />}
+                        </div>
+                        <p className="mono" style={{ fontSize: '0.75rem', opacity: 0.4, marginTop: '1rem' }}>Click to copy address. All SOL contributes to the Relayer tank.</p>
+                    </motion.div>
+
+                    <div className="qr-container">
+                        <LabyrinthQR />
+                    </div>
+                </div>
+            </div>
+        </section>
+    )
+}
+
+function LabyrinthQR() {
+    return (
+        <motion.svg
+            viewBox="0 0 200 200"
+            className="labyrinth-qr"
+            initial={{ opacity: 0, scale: 0.8 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 1.5 }}
+        >
+            {/* Labyrinth-styled "QR" shape */}
+            <motion.path
+                d="M 20 20 L 180 20 L 180 180 L 20 180 Z"
+                stroke="var(--accent)" strokeWidth="0.5" fill="transparent"
+                initial={{ pathLength: 0 }}
+                whileInView={{ pathLength: 1 }}
+                transition={{ duration: 2 }}
+            />
+            <motion.path
+                d="M 40 40 L 160 40 L 160 160 L 40 160 Z"
+                stroke="var(--accent)" strokeWidth="0.5" fill="transparent"
+                opacity="0.6"
+                initial={{ pathLength: 0 }}
+                whileInView={{ pathLength: 1 }}
+                transition={{ duration: 2, delay: 0.3 }}
+            />
+
+            {/* Maze bits */}
+            <motion.path
+                d="M 40 80 H 100 V 120 H 60 V 100 M 120 40 V 100 H 160 M 60 40 V 80 H 80"
+                stroke="var(--accent)" strokeWidth="0.8" fill="transparent"
+                initial={{ pathLength: 0 }}
+                whileInView={{ pathLength: 1 }}
+                transition={{ duration: 3, delay: 0.5 }}
+            />
+            <motion.path
+                d="M 120 160 V 130 H 140 V 160 M 80 160 V 140 H 100"
+                stroke="var(--accent)" strokeWidth="0.8" fill="transparent"
+                initial={{ pathLength: 0 }}
+                whileInView={{ pathLength: 1 }}
+                transition={{ duration: 3, delay: 0.7 }}
+            />
+
+            <motion.circle
+                cx="100" cy="100" r="5"
+                fill="var(--signal)"
+                initial={{ opacity: 0 }}
+                animate={{ opacity: [0, 1, 0] }}
+                transition={{ duration: 2, repeat: Infinity }}
+            />
+        </motion.svg>
+    )
+}

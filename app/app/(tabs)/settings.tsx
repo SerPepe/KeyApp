@@ -1,0 +1,433 @@
+import React, { useState, useEffect } from 'react';
+import {
+    View,
+    Text,
+    StyleSheet,
+    Pressable,
+    Alert,
+    ScrollView,
+    Platform,
+    Dimensions,
+} from 'react-native';
+import { BlurView } from 'expo-blur';
+import { useRouter } from 'expo-router';
+import { Ionicons } from '@expo/vector-icons';
+import * as Haptics from 'expo-haptics';
+import { Colors } from '@/constants/Colors';
+import { getStoredUsername, getStoredKeypair, deleteIdentity } from '@/lib/keychain';
+import { clearAllData } from '@/lib/storage';
+import { uint8ToBase58 } from '@/lib/crypto';
+import { fetchConfig, releaseUsername, type AppConfig } from '@/lib/api';
+
+const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+
+export default function SettingsScreen() {
+    const router = useRouter();
+    const [username, setUsername] = useState<string | null>(null);
+    const [publicKey, setPublicKey] = useState<string | null>(null);
+    const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+
+    useEffect(() => {
+        loadIdentity();
+        loadConfig();
+    }, []);
+
+    const loadConfig = async () => {
+        const config = await fetchConfig();
+        setAppConfig(config);
+    };
+
+    const loadIdentity = async () => {
+        const [storedUsername, keypair] = await Promise.all([
+            getStoredUsername(),
+            getStoredKeypair(),
+        ]);
+        setUsername(storedUsername);
+        if (keypair) {
+            setPublicKey(uint8ToBase58(keypair.publicKey));
+        }
+    };
+
+    const handleBurnIdentity = () => {
+        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        Alert.alert(
+            'Burn Identity',
+            'This will permanently delete your keys and all messages. Your username will be released for others to claim.',
+            [
+                { text: 'Cancel', style: 'cancel' },
+                {
+                    text: 'Burn',
+                    style: 'destructive',
+                    onPress: async () => {
+                        try {
+                            // Release username first (adds .XX suffix like Signal)
+                            if (username) {
+                                await releaseUsername(username);
+                                console.log(`🔄 Username @${username} released`);
+                            }
+                        } catch (err) {
+                            // Continue even if release fails (might be offline)
+                            console.warn('Username release failed:', err);
+                        }
+
+                        await deleteIdentity();
+                        await clearAllData();
+                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        router.replace('/onboarding');
+                    },
+                },
+            ]
+        );
+    };
+
+    return (
+        <View style={styles.container}>
+            {/* Subtle Renaissance Background Element */}
+            <View style={styles.backgroundArt}>
+                <Text style={styles.watermark}>⚿</Text>
+            </View>
+
+            {/* Glass Header - Compact */}
+            <BlurView intensity={20} tint="dark" style={styles.header}>
+                <Text style={styles.headerTitle}>Settings</Text>
+            </BlurView>
+
+            <View style={styles.mainContent}>
+                {/* Identity Card - Compacted */}
+                <View style={[styles.card, styles.identityCard]}>
+                    <View style={styles.cardHeader}>
+                        <View style={styles.avatar}>
+                            <Text style={styles.avatarText}>
+                                {username?.slice(0, 2).toUpperCase() || '??'}
+                            </Text>
+                        </View>
+                        <View style={styles.identityInfo}>
+                            <Text style={styles.username}>@{username || 'unknown'}</Text>
+                            <View style={styles.networkBadge}>
+                                <View style={[
+                                    styles.networkDot,
+                                    appConfig?.network === 'mainnet-beta' && { backgroundColor: Colors.primary }
+                                ]} />
+                                <Text style={styles.networkText}>
+                                    {appConfig?.network === 'mainnet-beta' ? 'MAINNET' : 'DEVNET'}
+                                </Text>
+                            </View>
+                        </View>
+                    </View>
+
+                    {publicKey && (
+                        <View style={styles.publicKeyContainer}>
+                            <Text style={styles.publicKeyLabel}>PUBLIC IDENTITY KEY</Text>
+                            <View style={styles.keyBox}>
+                                <Text style={styles.publicKey} numberOfLines={1}>
+                                    {publicKey}
+                                </Text>
+                                <Ionicons name="copy-outline" size={12} color={Colors.primary} />
+                            </View>
+                        </View>
+                    )}
+                </View>
+
+                {/* Combined System Sections for compactness */}
+                <View style={styles.compactGrid}>
+                    <View style={styles.gridHalf}>
+                        <Text style={styles.sectionTitle}>Security</Text>
+                        <View style={styles.cardCompact}>
+                            <SettingsRow
+                                icon="shield-checkmark-outline"
+                                title="Encrypted"
+                                showChevron={false}
+                                compact
+                            />
+                            <View style={styles.divider} />
+                            <SettingsRow
+                                icon="key-outline"
+                                title="Sovereign"
+                                showChevron={false}
+                                compact
+                            />
+                        </View>
+                    </View>
+
+                    <View style={styles.gridHalf}>
+                        <Text style={styles.sectionTitle}>Protocol</Text>
+                        <View style={styles.cardCompact}>
+                            <SettingsRow
+                                icon="git-branch-outline"
+                                title={`v${appConfig?.version || '1.0.0'}`}
+                                showChevron={false}
+                                compact
+                            />
+                            <View style={styles.divider} />
+                            <SettingsRow
+                                icon="logo-github"
+                                title="Source"
+                                showChevron={false}
+                                compact
+                            />
+                        </View>
+                    </View>
+                </View>
+
+                {/* Danger Zone - More compact, higher up */}
+                <View style={styles.dangerZone}>
+                    <Text style={styles.dangerTitle}>Emergency Protocol</Text>
+                    <Pressable
+                        style={({ pressed }) => [
+                            styles.burnButton,
+                            pressed && styles.burnButtonPressed,
+                        ]}
+                        onPress={handleBurnIdentity}
+                    >
+                        <Ionicons name="flame" size={16} color={Colors.error} />
+                        <Text style={styles.burnButtonText}>BURN IDENTITY</Text>
+                    </Pressable>
+                </View>
+            </View>
+
+            {/* No scroll needed as everything fits */}
+        </View>
+    );
+}
+
+function SettingsRow({
+    icon,
+    title,
+    subtitle,
+    showChevron = true,
+    compact = false
+}: {
+    icon: keyof typeof Ionicons.glyphMap;
+    title: string;
+    subtitle?: string;
+    showChevron?: boolean;
+    compact?: boolean;
+}) {
+    return (
+        <View style={[styles.settingsRow, compact && { paddingVertical: 2 }]}>
+            <Ionicons name={icon} size={compact ? 18 : 20} color={Colors.primary} />
+            <View style={styles.settingsRowContent}>
+                <Text style={[styles.settingsRowTitle, compact && { fontSize: 13 }]}>{title}</Text>
+                {subtitle && !compact && (
+                    <Text style={styles.settingsRowSubtitle}>{subtitle}</Text>
+                )}
+            </View>
+            {showChevron && (
+                <Ionicons name="chevron-forward" size={14} color={Colors.textMuted} />
+            )}
+        </View>
+    );
+}
+
+const styles = StyleSheet.create({
+    container: {
+        flex: 1,
+        backgroundColor: Colors.background,
+    },
+    backgroundArt: {
+        position: 'absolute',
+        top: 60,
+        right: -10,
+        opacity: 0.02,
+    },
+    watermark: {
+        fontSize: 160,
+        color: Colors.primary,
+    },
+    header: {
+        paddingTop: Platform.OS === 'ios' ? 54 : 40,
+        paddingBottom: 15,
+        paddingHorizontal: 24,
+        borderBottomWidth: 1,
+        borderBottomColor: Colors.border,
+    },
+    headerTitle: {
+        fontSize: 28,
+        fontWeight: '300',
+        color: Colors.text,
+        letterSpacing: 2,
+        fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    },
+    mainContent: {
+        flex: 1,
+        paddingHorizontal: 20,
+        paddingTop: 16,
+    },
+    card: {
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: 16,
+        padding: 16,
+        marginBottom: 20,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    identityCard: {
+        borderColor: 'rgba(201, 169, 98, 0.15)',
+        backgroundColor: 'rgba(201, 169, 98, 0.02)',
+    },
+    cardHeader: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    avatar: {
+        width: 52,
+        height: 52,
+        borderRadius: 26,
+        backgroundColor: Colors.primaryMuted,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 1,
+        borderColor: 'rgba(201, 169, 98, 0.3)',
+    },
+    avatarText: {
+        fontSize: 20,
+        fontWeight: '300',
+        color: Colors.primary,
+        fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
+    },
+    identityInfo: {
+        marginLeft: 14,
+    },
+    username: {
+        fontSize: 18,
+        fontWeight: '400',
+        color: Colors.text,
+        fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+    },
+    networkBadge: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        marginTop: 4,
+        backgroundColor: 'rgba(52, 211, 153, 0.1)',
+        paddingHorizontal: 6,
+        paddingVertical: 2,
+        borderRadius: 4,
+        alignSelf: 'flex-start',
+    },
+    networkDot: {
+        width: 4,
+        height: 4,
+        borderRadius: 2,
+        backgroundColor: Colors.accent,
+        marginRight: 4,
+    },
+    networkText: {
+        fontSize: 9,
+        fontWeight: '700',
+        color: Colors.accent,
+        letterSpacing: 1,
+    },
+    publicKeyContainer: {
+        marginTop: 14,
+        paddingTop: 12,
+        borderTopWidth: 1,
+        borderTopColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    publicKeyLabel: {
+        fontSize: 9,
+        color: Colors.textMuted,
+        marginBottom: 6,
+        letterSpacing: 1.5,
+        fontWeight: '600',
+    },
+    keyBox: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        backgroundColor: 'rgba(0, 0, 0, 0.2)',
+        borderRadius: 6,
+        padding: 8,
+        justifyContent: 'space-between',
+    },
+    publicKey: {
+        flex: 1,
+        fontSize: 11,
+        color: Colors.textSecondary,
+        fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
+        marginRight: 8,
+    },
+    compactGrid: {
+        flexDirection: 'row',
+        gap: 16,
+        marginBottom: 20,
+    },
+    gridHalf: {
+        flex: 1,
+    },
+    cardCompact: {
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderRadius: 12,
+        padding: 12,
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    sectionTitle: {
+        fontSize: 10,
+        color: Colors.primary,
+        opacity: 0.8,
+        marginBottom: 8,
+        marginLeft: 4,
+        letterSpacing: 2,
+        fontWeight: '700',
+        textTransform: 'uppercase',
+    },
+    settingsRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+    },
+    settingsRowContent: {
+        flex: 1,
+        marginLeft: 10,
+    },
+    settingsRowTitle: {
+        fontSize: 14,
+        fontWeight: '500',
+        color: Colors.text,
+    },
+    settingsRowSubtitle: {
+        fontSize: 12,
+        color: Colors.textMuted,
+        marginTop: 1,
+    },
+    divider: {
+        height: 1,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        marginVertical: 10,
+    },
+    dangerZone: {
+        marginTop: 10,
+        padding: 16,
+        borderRadius: 20,
+        backgroundColor: 'rgba(255, 107, 107, 0.03)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 107, 107, 0.1)',
+    },
+    dangerTitle: {
+        fontSize: 10,
+        color: Colors.error,
+        fontWeight: '700',
+        letterSpacing: 2,
+        textTransform: 'uppercase',
+        marginBottom: 12,
+        textAlign: 'center',
+    },
+    burnButton: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingVertical: 12,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255, 107, 107, 0.08)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 107, 107, 0.2)',
+        gap: 8,
+    },
+    burnButtonPressed: {
+        backgroundColor: 'rgba(255, 107, 107, 0.15)',
+    },
+    burnButtonText: {
+        fontSize: 12,
+        fontWeight: '700',
+        color: Colors.error,
+        letterSpacing: 1.5,
+    },
+});

@@ -1,0 +1,202 @@
+import { Connection, PublicKey, ParsedTransactionWithMeta } from '@solana/web3.js';
+import { base64ToUint8, decryptMessage, getEncryptionKeypair } from './crypto';
+import { getStoredKeypair, getStoredUsername } from './keychain';
+import { saveChat, saveMessage, generateMessageId, type Message } from './storage';
+import * as Notifications from 'expo-notifications';
+
+const RPC_URL = process.env.EXPO_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com';
+const connection = new Connection(RPC_URL, 'confirmed');
+
+type MessageCallback = (message: Message) => void;
+
+let subscriptionId: number | null = null;
+let messageCallbacks: MessageCallback[] = [];
+
+/**
+ * Start listening for incoming messages via WebSocket
+ */
+export async function startMessageListener(): Promise<void> {
+    const keypair = await getStoredKeypair();
+    if (!keypair) {
+        console.warn('No keypair found, cannot start listener');
+        return;
+    }
+
+    const publicKey = new PublicKey(keypair.publicKey);
+
+    console.log('🔌 Starting WebSocket listener for:', publicKey.toBase58().slice(0, 8) + '...');
+
+    // Subscribe to account changes (transactions to our address)
+    subscriptionId = connection.onLogs(
+        publicKey,
+        async (logs, ctx) => {
+            const { signature } = logs;
+
+            try {
+                // Fetch full transaction details
+                const tx = await connection.getParsedTransaction(signature, {
+                    maxSupportedTransactionVersion: 0,
+                });
+
+                if (!tx) return;
+
+                // Look for memo instruction
+                const memoData = extractMemoFromTransaction(tx);
+                if (!memoData) return;
+
+                // Try to decrypt the message
+                const decryptedMessage = await tryDecryptMessage(memoData, tx);
+                if (decryptedMessage) {
+                    console.log('📩 New message received!');
+
+                    // Notify callbacks
+                    messageCallbacks.forEach((cb) => cb(decryptedMessage));
+
+                    // Show push notification
+                    await showMessageNotification(decryptedMessage);
+                }
+            } catch (error) {
+                console.error('Error processing transaction:', error);
+            }
+        },
+        'confirmed'
+    );
+
+    console.log('✅ WebSocket listener started, subscription ID:', subscriptionId);
+}
+
+/**
+ * Stop the WebSocket listener
+ */
+export async function stopMessageListener(): Promise<void> {
+    if (subscriptionId !== null) {
+        await connection.removeOnLogsListener(subscriptionId);
+        subscriptionId = null;
+        console.log('🔌 WebSocket listener stopped');
+    }
+}
+
+/**
+ * Subscribe to new messages
+ */
+export function onNewMessage(callback: MessageCallback): () => void {
+    messageCallbacks.push(callback);
+
+    // Return unsubscribe function
+    return () => {
+        messageCallbacks = messageCallbacks.filter((cb) => cb !== callback);
+    };
+}
+
+/**
+ * Extract memo data from a parsed transaction
+ */
+function extractMemoFromTransaction(tx: ParsedTransactionWithMeta): string | null {
+    const memoInstruction = tx.transaction.message.instructions.find(
+        (ix: any) => ix.program === 'spl-memo' || ix.programId?.toBase58() === 'MemoSq4gqABAXKb96qnH8TysNcWxMyWCqXgDLGmfcHr'
+    );
+
+    if (memoInstruction && 'parsed' in memoInstruction) {
+        return memoInstruction.parsed as string;
+    }
+
+    return null;
+}
+
+/**
+ * Try to decrypt a memo as an incoming message
+ * Memo format: senderPubkey|encryptedMessage
+ */
+async function tryDecryptMessage(
+    memoData: string,
+    tx: ParsedTransactionWithMeta
+): Promise<Message | null> {
+    try {
+        const keypair = await getStoredKeypair();
+        if (!keypair) return null;
+
+        // Parse memo format: senderPubkey|encryptedMessage
+        const pipeIndex = memoData.indexOf('|');
+        if (pipeIndex === -1) {
+            console.log('Invalid memo format - missing pipe separator');
+            return null;
+        }
+
+        const senderPubkey = memoData.slice(0, pipeIndex);
+        const encryptedMessage = memoData.slice(pipeIndex + 1);
+
+        // Validate sender pubkey looks like a Solana address (44 chars base58)
+        if (senderPubkey.length < 32 || senderPubkey.length > 44) {
+            console.log('Invalid sender pubkey in memo');
+            return null;
+        }
+
+        // Get our encryption keypair
+        const encryptionKeypair = getEncryptionKeypair(keypair);
+
+        // Lookup sender's encryption key from the API
+        const { getUsernameByOwner } = await import('./api');
+        const senderData = await getUsernameByOwner(senderPubkey);
+
+        if (!senderData?.encryptionKey) {
+            console.log('Sender encryption key not found, cannot decrypt');
+            return null;
+        }
+
+        const senderEncryptionKey = base64ToUint8(senderData.encryptionKey);
+
+        // Try to decrypt
+        const decryptedText = decryptMessage(
+            encryptedMessage,
+            senderEncryptionKey,
+            encryptionKeypair.secretKey
+        );
+
+        // Create message object
+        const chatId = senderData.username || senderPubkey.slice(0, 8);
+        const message: Message = {
+            id: generateMessageId(),
+            chatId,
+            type: 'text',
+            content: decryptedText,
+            timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
+            isMine: false,
+            status: 'confirmed',
+            txSignature: tx.transaction.signatures[0],
+        };
+
+        // Save to local storage
+        await saveMessage(message);
+
+        // Also save/update chat
+        await saveChat({
+            username: chatId,
+            publicKey: senderPubkey,
+            lastMessage: decryptedText,
+            lastMessageTime: message.timestamp,
+            unreadCount: 1,
+        });
+
+        console.log(`📩 Decrypted message from @${chatId}: "${decryptedText.slice(0, 20)}..."`);
+        return message;
+    } catch (error) {
+        // Decryption failed - message not for us or invalid format
+        console.log('Decryption failed:', error);
+        return null;
+    }
+}
+
+/**
+ * Show a push notification for a new message
+ */
+async function showMessageNotification(message: Message): Promise<void> {
+    await Notifications.scheduleNotificationAsync({
+        content: {
+            title: `@${message.chatId}`,
+            body: message.content.slice(0, 100),
+            data: { chatId: message.chatId },
+            sound: 'default',
+        },
+        trigger: null, // Immediately
+    });
+}

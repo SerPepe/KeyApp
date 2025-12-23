@@ -1,0 +1,401 @@
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3000';
+
+/**
+ * API Response types
+ */
+export interface HealthResponse {
+    status: string;
+    feePayerBalance: string;
+}
+
+export interface AppConfig {
+    network: string;
+    version: string;
+    commit: string;
+}
+
+export interface UsernameCheckResponse {
+    username: string;
+    available: boolean;
+}
+
+export interface BuildTransactionResponse {
+    success: boolean;
+    transaction: string; // Base64 encoded unsigned transaction
+    blockhash: string;
+    lastValidBlockHeight: number;
+}
+
+export interface RegisterResponse {
+    success: boolean;
+    username: string;
+    signature?: string;
+    explorer?: string;
+}
+
+export interface UserData {
+    username: string;
+    publicKey: string;
+    encryptionKey: string | null;
+    registeredAt?: string;
+}
+
+/**
+ * Fetch app configuration
+ */
+export async function fetchConfig(): Promise<AppConfig | null> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/config`);
+        if (!response.ok) return null;
+        return response.json();
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Check API health
+ */
+export async function checkHealth(): Promise<HealthResponse | null> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/health`);
+        if (!response.ok) return null;
+        return response.json();
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Check if a username is available
+ */
+export async function checkUsernameAvailable(username: string): Promise<boolean> {
+    const response = await fetch(`${API_BASE_URL}/api/username/${username}/check`);
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Username check failed');
+    }
+
+    const data: UsernameCheckResponse = await response.json();
+    return data.available;
+}
+
+/**
+ * Build an unsigned transaction for username registration
+ * User will sign this with their keypair
+ */
+export async function buildUsernameTransaction(
+    username: string,
+    ownerPublicKey: string
+): Promise<BuildTransactionResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/username/build-transaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username,
+            ownerPublicKey,
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to build transaction');
+    }
+
+    return response.json();
+}
+
+/**
+ * Register a username with a signed transaction (production flow)
+ * @param username - The username to register
+ * @param signedTransaction - Base64 encoded signed transaction
+ * @param encryptionKey - Encryption key for messaging
+ */
+export async function registerUsernameWithTransaction(
+    username: string,
+    signedTransaction: string,
+    encryptionKey: string
+): Promise<RegisterResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/username/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username,
+            signedTransaction,
+            encryptionKey,
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Username registration failed');
+    }
+
+    return response.json();
+}
+
+/**
+ * Register a username (simplified flow - for development only)
+ * In this flow, the fee payer becomes the owner
+ * @deprecated Use registerUsernameWithTransaction for production
+ */
+export async function registerUsername(
+    username: string,
+    publicKey: string,
+    encryptionKey: string
+): Promise<RegisterResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/username/register`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username,
+            publicKey,
+            encryptionKey,
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Username registration failed');
+    }
+
+    return response.json();
+}
+
+/**
+ * Get user's keys by username
+ */
+export async function getPublicKeyByUsername(username: string): Promise<UserData | null> {
+    const response = await fetch(`${API_BASE_URL}/api/username/${username}`);
+
+    if (response.status === 404) {
+        return null;
+    }
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to fetch user');
+    }
+
+    return response.json();
+}
+
+/**
+ * Recover username data by owner public key
+ */
+export async function getUsernameByOwner(ownerPublicKey: string): Promise<UserData | null> {
+    const response = await fetch(`${API_BASE_URL}/api/username/owner/${ownerPublicKey}`);
+
+    if (response.status === 404) {
+        return null;
+    }
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to fetch username by owner');
+    }
+
+    return response.json();
+}
+
+/**
+ * Release a username (for burn identity flow)
+ */
+export async function releaseUsername(username: string): Promise<{
+    success: boolean;
+    message: string;
+}> {
+    const response = await fetch(`${API_BASE_URL}/api/username/${username}/release`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({}),
+    });
+
+    const data = await response.json();
+
+    if (!response.ok && response.status !== 501) {
+        throw new Error(data.message || 'Username release failed');
+    }
+
+    return data;
+}
+
+/**
+ * Send response for message API
+ */
+export interface SendMessageResponse {
+    success: boolean;
+    signature: string;
+    explorer: string;
+}
+
+/**
+ * Send an encrypted message via Solana memo transaction
+ * The fee payer handles all transaction costs
+ */
+export async function sendMessage(
+    encryptedMessage: string,
+    recipientPubkey: string,
+    senderPubkey: string
+): Promise<SendMessageResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/message/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            encryptedMessage,
+            recipientPubkey,
+            senderPubkey,
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Message send failed');
+    }
+
+    return response.json();
+}
+
+/**
+ * Update encryption key for an existing user
+ * This is needed after server restart when in-memory store is cleared
+ */
+export async function updateEncryptionKey(
+    username: string,
+    encryptionKey: string,
+    ownerPublicKey: string
+): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/username/${username}/encryption-key`, {
+        method: 'PUT',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            encryptionKey,
+            ownerPublicKey,
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to update encryption key');
+    }
+
+    return response.json();
+}
+
+/**
+ * Inbox message from API
+ */
+export interface InboxMessage {
+    signature: string;
+    senderPubkey: string;
+    encryptedMessage: string;
+    timestamp: number;
+}
+
+/**
+ * Fetch messages from inbox (polling fallback for WebSocket)
+ * @param recipientPubkey - The recipient's Solana public key
+ * @param since - Optional unix timestamp to only get messages after this time
+ */
+export async function fetchInbox(
+    recipientPubkey: string,
+    since?: number
+): Promise<{ messages: InboxMessage[] }> {
+    const url = new URL(`${API_BASE_URL}/api/message/inbox/${recipientPubkey}`);
+    if (since) {
+        url.searchParams.set('since', since.toString());
+    }
+
+    const response = await fetch(url.toString());
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to fetch inbox');
+    }
+
+    return response.json();
+}
+
+
+// ==================== BLOCKING API ====================
+
+/**
+ * Block a user
+ */
+export async function blockUser(blockerPubkey: string, blockedPubkey: string): Promise<{ success: boolean }> {
+    const response = await fetch(`${API_BASE_URL}/api/block`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockerPubkey, blockedPubkey }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to block user');
+    }
+
+    return response.json();
+}
+
+/**
+ * Unblock a user
+ */
+export async function unblockUser(blockerPubkey: string, blockedPubkey: string): Promise<{ success: boolean }> {
+    const response = await fetch(`${API_BASE_URL}/api/block`, {
+        method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ blockerPubkey, blockedPubkey }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to unblock user');
+    }
+
+    return response.json();
+}
+
+/**
+ * Check if a user is blocked
+ */
+export async function checkBlocked(blockerPubkey: string, blockedPubkey: string): Promise<boolean> {
+    const response = await fetch(`${API_BASE_URL}/api/block/check?blocker=${blockerPubkey}&blocked=${blockedPubkey}`);
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to check block status');
+    }
+
+    const data = await response.json();
+    return data.isBlocked;
+}
+
+/**
+ * Get list of blocked users for a pubkey
+ */
+export async function getBlockedUsers(pubkey: string): Promise<string[]> {
+    const response = await fetch(`${API_BASE_URL}/api/block/list/${pubkey}`);
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to get blocked users');
+    }
+    const data = await response.json();
+    return data.blockedUsers;
+}
+
+/**
+ * Fetch large message content by ID
+ */
+export async function getMessageContent(id: string): Promise<string | null> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/message/content/${id}`);
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.content || null;
+    } catch (error) {
+        console.error('Failed to fetch message content:', error);
+        return null;
+    }
+}
