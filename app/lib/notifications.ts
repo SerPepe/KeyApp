@@ -7,20 +7,22 @@ import Constants from 'expo-constants';
 const isExpoGo = Constants.appOwnership === 'expo';
 
 // Configure notification behavior (wrap in try-catch for Expo Go compatibility)
-try {
-    if (!isExpoGo && Device.isDevice) {
-        Notifications.setNotificationHandler({
-            handleNotification: async () => ({
-                shouldShowAlert: true,
-                shouldPlaySound: true,
-                shouldSetBadge: true,
-                shouldShowBanner: true,
-                shouldShowList: true,
-            }),
-        });
+export function configureNotifications() {
+    try {
+        if (!isExpoGo && Device.isDevice) {
+            Notifications.setNotificationHandler({
+                handleNotification: async () => ({
+                    shouldShowAlert: true,
+                    shouldPlaySound: true,
+                    shouldSetBadge: true,
+                    shouldShowBanner: true,
+                    shouldShowList: true,
+                }),
+            });
+        }
+    } catch (error) {
+        console.warn('Notification handler setup failed:', error);
     }
-} catch (error) {
-    console.warn('Notification handler setup failed:', error);
 }
 
 /**

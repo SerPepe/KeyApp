@@ -1,3 +1,5 @@
+import '@/lib/nativeShims';
+
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
@@ -11,7 +13,7 @@ import { getStoredKeypair, getStoredUsername, storeUsername } from '@/lib/keycha
 import { uint8ToBase58, getEncryptionKeypair, uint8ToBase64 } from '@/lib/crypto';
 import { getUsernameByOwner, updateEncryptionKey } from '@/lib/api';
 import { startMessageListener } from '@/lib/websocket';
-import { registerForPushNotifications, setupNotificationChannel } from '@/lib/notifications';
+import { registerForPushNotifications, setupNotificationChannel, configureNotifications } from '@/lib/notifications';
 
 export {
   ErrorBoundary,
@@ -92,6 +94,7 @@ function RootLayoutNav() {
   // Push notification setup
   useEffect(() => {
     if (hasIdentity) {
+      configureNotifications();
       setupNotificationChannel();
       registerForPushNotifications().then(token => {
         if (token) console.log('🔔 Push notifications registered:', token);
