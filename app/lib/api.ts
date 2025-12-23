@@ -203,19 +203,50 @@ export async function getUsernameByOwner(ownerPublicKey: string): Promise<UserDa
 /**
  * Release a username (for burn identity flow)
  */
-export async function releaseUsername(username: string): Promise<{
+/**
+ * Build an unsigned transaction to release/burn a username
+ */
+export async function buildReleaseTransaction(
+    username: string,
+    ownerPublicKey: string
+): Promise<BuildTransactionResponse> {
+    const response = await fetch(`${API_BASE_URL}/api/username/build-release-transaction`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            username,
+            ownerPublicKey,
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Failed to build release transaction');
+    }
+
+    return response.json();
+}
+
+/**
+ * Release a username with a signed transaction
+ */
+export async function releaseUsername(
+    username: string,
+    signedTransaction: string
+): Promise<{
     success: boolean;
+    signature: string;
     message: string;
 }> {
     const response = await fetch(`${API_BASE_URL}/api/username/${username}/release`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({}),
+        body: JSON.stringify({ signedTransaction }),
     });
 
     const data = await response.json();
 
-    if (!response.ok && response.status !== 501) {
+    if (!response.ok) {
         throw new Error(data.message || 'Username release failed');
     }
 

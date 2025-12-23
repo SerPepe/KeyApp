@@ -429,3 +429,46 @@ export async function closeUsernameOnChain(username: string): Promise<string> {
     console.log(`✅ Username @${username} account closed: ${signature}`);
     return signature;
 }
+
+/**
+ * Build a transaction for closing a username account (user will sign)
+ * 
+ * @param username - The username to close
+ * @param ownerPubkey - The owner's public key
+ * @returns Unsigned transaction and blockhash info
+ */
+export async function buildCloseUsernameTransaction(
+    username: string,
+    ownerPubkey: string
+): Promise<{
+    transaction: Transaction;
+    blockhash: string;
+    lastValidBlockHeight: number;
+}> {
+    const feePayer = getFeePayer();
+    const owner = new PublicKey(ownerPubkey);
+    const [userAccountPDA] = getUsernamePDA(username);
+
+    console.log(`📦 Building close tx for @${username}...`);
+    console.log(`   Owner: ${ownerPubkey}`);
+    console.log(`   PDA: ${userAccountPDA.toBase58()}`);
+
+    const instructionData = buildCloseAccountData(username);
+
+    const instruction = new TransactionInstruction({
+        keys: [
+            { pubkey: userAccountPDA, isSigner: false, isWritable: true },
+            { pubkey: owner, isSigner: true, isWritable: true }, // User must sign
+        ],
+        programId: PROGRAM_ID,
+        data: instructionData,
+    });
+
+    const transaction = new Transaction().add(instruction);
+    transaction.feePayer = feePayer.publicKey;
+
+    const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+    transaction.recentBlockhash = blockhash;
+
+    return { transaction, blockhash, lastValidBlockHeight };
+}

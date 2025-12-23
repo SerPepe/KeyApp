@@ -65,28 +65,27 @@ export async function takePhoto(): Promise<CompressedImage | null> {
  * Compress an image and return base64
  */
 export async function compressImage(uri: string): Promise<CompressedImage> {
-    // Resize to max dimensions while maintaining aspect ratio
-    const manipulatedImage = await ImageManipulator.manipulateAsync(
+    // Initial resize
+    let result = await ImageManipulator.manipulateAsync(
         uri,
-        [
-            {
-                resize: {
-                    width: MAX_WIDTH,
-                    height: MAX_HEIGHT,
-                },
-            },
-        ],
-        {
-            compress: COMPRESSION_QUALITY,
-            format: ImageManipulator.SaveFormat.JPEG,
-            base64: true,
-        }
+        [{ resize: { width: 512, height: 512 } }], // Resize first to reasonable avatar dimensions
+        { compress: 0.7, format: ImageManipulator.SaveFormat.JPEG, base64: true }
     );
 
+    // If still too big (>400KB to be safe), compress more aggressively
+    if (result.base64 && result.base64.length > 400 * 1024 * 1.33) {
+        console.log('📉 Image too large, compressing further...');
+        result = await ImageManipulator.manipulateAsync(
+            uri,
+            [{ resize: { width: 400, height: 400 } }],
+            { compress: 0.5, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+        );
+    }
+
     return {
-        base64: manipulatedImage.base64 || '',
-        width: manipulatedImage.width,
-        height: manipulatedImage.height,
+        base64: result.base64 || '',
+        width: result.width,
+        height: result.height,
         mimeType: 'image/jpeg',
     };
 }

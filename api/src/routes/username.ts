@@ -8,6 +8,7 @@ import {
     buildRegisterUsernameTransaction,
     relaySignedTransaction,
     closeUsernameOnChain,
+    buildCloseUsernameTransaction,
     connection,
     findUserByOwner,
     getFeePayerBalance
@@ -405,38 +406,98 @@ router.post('/test', spendingLimitMiddleware, async (req: Request, res: Response
  * Release a username (close on-chain account)
  * Note: Requires program modification to support account closing
  */
-router.post('/:name/release', spendingLimitMiddleware, async (req: Request, res: Response) => {
+/**
+ * POST /api/username/build-release-transaction
+ * Build transaction to close/burn a username (user signs)
+ */
+router.post('/build-release-transaction', spendingLimitMiddleware, async (req: Request, res: Response) => {
     try {
-        const { name } = req.params;
-        const username = name.toLowerCase();
+        const { username, ownerPublicKey } = req.body;
+        const lowerUsername = username.toLowerCase();
 
         // Check if username exists on-chain
-        const userAccount = await getUserAccount(username);
+        const userAccount = await getUserAccount(lowerUsername);
 
         if (!userAccount) {
-            // Not on-chain, just clear encryption key
-            encryptionKeyStore.delete(username);
-            return res.json({
-                success: true,
-                message: 'Username was not on-chain, cleared local data',
+            return res.status(404).json({
+                error: 'User not found',
+                message: 'Username is not registered on-chain',
             });
         }
 
-        // Close the on-chain account
-        console.log(`🗑️ Releasing username @${username} on-chain...`);
-        const signature = await closeUsernameOnChain(username);
+        if (userAccount.owner !== ownerPublicKey) {
+            return res.status(403).json({
+                error: 'Unauthorized',
+                message: 'Provided public key does not own this username',
+            });
+        }
 
-        // Clear encryption key
-        encryptionKeyStore.delete(username);
+        // Build the close transaction
+        const { transaction, blockhash, lastValidBlockHeight } =
+            await buildCloseUsernameTransaction(lowerUsername, ownerPublicKey);
+
+        // Serialize transaction (base64)
+        const serializedTx = transaction.serialize({
+            requireAllSignatures: false,
+            verifySignatures: false,
+        }).toString('base64');
 
         return res.json({
             success: true,
-            username,
-            signature,
-            explorer: `https://explorer.solana.com/tx/${signature}?cluster=devnet`,
-            message: 'Username released! Account closed on-chain, rent returned.',
+            transaction: serializedTx,
+            blockhash,
+            lastValidBlockHeight,
         });
     } catch (error) {
+        console.error('❌ Build release tx error:', error);
+        return res.status(500).json({
+            error: 'Build failed',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
+/**
+ * POST /api/username/release
+ * Relays a signed transaction to release/burn a username
+ */
+router.post('/:name/release', spendingLimitMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { name } = req.params;
+        const { signedTransaction } = req.body;
+        const username = name.toLowerCase();
+
+        if (signedTransaction) {
+            console.log(`📝 Relaying signed release tx for @${username}...`);
+            const signature = await relaySignedTransaction(signedTransaction);
+
+            // Clear encryption key
+            encryptionKeyStore.delete(username);
+
+            return res.json({
+                success: true,
+                username,
+                signature,
+                explorer: `https://explorer.solana.com/tx/${signature}?cluster=devnet`,
+                message: 'Username released! Account closed on-chain.',
+            });
+        }
+
+        // Fallback or error if no signed tx provided (old behavior deprecated)
+        return res.status(400).json({
+            error: 'Missing transaction',
+            message: 'signedTransaction is required',
+        });
+    } catch (error) {
+        if (error instanceof SendTransactionError) {
+            const logs = await error.getLogs(connection);
+            console.error('❌ Release simulation logs:', logs);
+            return res.status(400).json({
+                error: 'Release failed',
+                message: error.message,
+                logs,
+            });
+        }
         console.error('❌ Release error:', error);
         return res.status(500).json({
             error: 'Release failed',

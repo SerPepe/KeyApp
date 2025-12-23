@@ -13,6 +13,7 @@ import {
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { Colors } from '@/constants/Colors';
 import { MessageBubble } from '@/components/MessageBubble';
 import { ImageBubble } from '@/components/ImageBubble';
@@ -513,17 +514,32 @@ export default function ChatScreen() {
 
     return (
         <KeyboardAvoidingView
-            style={[styles.container, { backgroundColor }]}
+            style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={88}
         >
+            {/* Background Layer (Solid or Gradient) */}
+            {
+                backgroundColor.startsWith('gradient:') ? (
+                    <LinearGradient
+                        colors={JSON.parse(backgroundColor.replace('gradient: ', ''))}
+                        style={StyleSheet.absoluteFillObject}
+                        start={{ x: 0, y: 0 }}
+                        end={{ x: 1, y: 1 }}
+                    />
+                ) : (
+                    <View style={[StyleSheet.absoluteFillObject, { backgroundColor }]} />
+                )
+            }
+
             <Stack.Screen
                 options={{
                     title: `@${username}`,
                     headerBackTitle: 'Back',
                     headerTitleAlign: 'center',
                     headerShadowVisible: false,
-                    headerStyle: { backgroundColor: Colors.background },
+                    headerStyle: { backgroundColor: backgroundColor.startsWith('gradient:') ? 'transparent' : Colors.background },
+                    headerTransparent: backgroundColor.startsWith('gradient:'),
                     headerTintColor: Colors.text,
 
                     headerTitleStyle: { fontWeight: '600' },
@@ -566,23 +582,25 @@ export default function ChatScreen() {
             />
 
             {/* Reply preview */}
-            {replyingTo && (
-                <View style={styles.replyPreview}>
-                    <View style={styles.replyBar} />
-                    <View style={styles.replyContent}>
-                        <Text style={styles.replyLabel}>Reply to</Text>
-                        <Text style={styles.replyText} numberOfLines={1}>
-                            {replyingTo.type === 'image' ? '📷 Photo' : replyingTo.content}
+            {
+                replyingTo && (
+                    <View style={styles.replyPreview}>
+                        <View style={styles.replyBar} />
+                        <View style={styles.replyContent}>
+                            <Text style={styles.replyLabel}>Reply to</Text>
+                            <Text style={styles.replyText} numberOfLines={1}>
+                                {replyingTo.type === 'image' ? '📷 Photo' : replyingTo.content}
+                            </Text>
+                        </View>
+                        <Text
+                            style={styles.replyClear}
+                            onPress={() => setReplyingTo(null)}
+                        >
+                            ✕
                         </Text>
                     </View>
-                    <Text
-                        style={styles.replyClear}
-                        onPress={() => setReplyingTo(null)}
-                    >
-                        ✕
-                    </Text>
-                </View>
-            )}
+                )
+            }
 
             <ChatInput
                 onSend={handleSend}
@@ -602,7 +620,7 @@ export default function ChatScreen() {
                     setEmojiPickerVisible(false);
                 }}
             />
-        </KeyboardAvoidingView>
+        </KeyboardAvoidingView >
     );
 }
 

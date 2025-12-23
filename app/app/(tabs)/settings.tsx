@@ -12,6 +12,7 @@ import {
     Image,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -19,7 +20,7 @@ import { Colors } from '@/constants/Colors';
 import { getStoredUsername, getStoredKeypair, deleteIdentity } from '@/lib/keychain';
 import { clearAllData } from '@/lib/storage';
 import { uint8ToBase58 } from '@/lib/crypto';
-import { fetchConfig, releaseUsername, uploadAvatar, type AppConfig } from '@/lib/api';
+import { fetchConfig, releaseUsername, uploadAvatar, buildReleaseTransaction, type AppConfig } from '@/lib/api';
 import { pickImage, type CompressedImage } from '@/lib/imageUtils';
 import { getUserSettings, saveUserSettings, CHAT_BACKGROUND_PRESETS, type UserSettings } from '@/lib/settingsStorage';
 
@@ -109,12 +110,28 @@ export default function SettingsScreen() {
                         try {
                             // Release username first (adds .XX suffix like Signal)
                             if (username) {
-                                await releaseUsername(username);
+                                // 1. Get keys
+                                const keypair = await getStoredKeypair();
+                                if (!keypair) {
+                                    throw new Error('No identity keys found');
+                                }
+                                const ownerPublicKey = uint8ToBase58(keypair.publicKey);
+
+                                // 2. Build transaction (unsigned)
+                                const { transaction: unsignedTx } = await buildReleaseTransaction(username, ownerPublicKey);
+
+                                // 3. Sign transaction
+                                const { signTransaction } = await import('@/lib/crypto');
+                                const signedTx = signTransaction(unsignedTx, keypair.secretKey);
+
+                                // 4. Submit signed transaction
+                                await releaseUsername(username, signedTx);
                                 console.log(`🔄 Username @${username} released`);
                             }
                         } catch (err) {
                             // Continue even if release fails (might be offline)
                             console.warn('Username release failed:', err);
+                            Alert.alert('Release Failed', 'Could not release username on-chain, but local data will be cleared.');
                         }
 
                         await deleteIdentity();
@@ -189,17 +206,29 @@ export default function SettingsScreen() {
                     <Text style={styles.sectionTitle}>Appearance</Text>
                     <Text style={styles.settingLabel}>Chat Background</Text>
                     <View style={styles.colorRow}>
-                        {CHAT_BACKGROUND_PRESETS.map((color) => (
-                            <Pressable
-                                key={color}
-                                style={[
-                                    styles.colorSwatch,
-                                    { backgroundColor: color },
-                                    userSettings.chatBackgroundColor === color && styles.colorSwatchSelected,
-                                ]}
-                                onPress={() => handleBackgroundSelect(color)}
-                            />
-                        ))}
+                        {CHAT_BACKGROUND_PRESETS.map((color) => {
+                            const isGradient = color.startsWith('gradient:');
+                            return (
+                                <Pressable
+                                    key={color}
+                                    style={[
+                                        styles.colorSwatch,
+                                        userSettings.chatBackgroundColor === color && styles.colorSwatchSelected,
+                                        !isGradient && { backgroundColor: color }
+                                    ]}
+                                    onPress={() => handleBackgroundSelect(color)}
+                                >
+                                    {isGradient && (
+                                        <LinearGradient
+                                            colors={JSON.parse(color.replace('gradient: ', ''))}
+                                            style={StyleSheet.absoluteFill}
+                                            start={{ x: 0, y: 0 }}
+                                            end={{ x: 1, y: 1 }}
+                                        />
+                                    )}
+                                </Pressable>
+                            );
+                        })}
                     </View>
                 </View>
 
@@ -554,6 +583,7 @@ const styles = StyleSheet.create({
         borderRadius: 18,
         borderWidth: 2,
         borderColor: 'transparent',
+        overflow: 'hidden', // Ensures gradients honor the border radius
     },
     colorSwatchSelected: {
         borderColor: Colors.primary,
