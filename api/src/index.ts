@@ -64,9 +64,9 @@ async function start() {
         console.warn('⚠️  Could not check balance:', error);
     }
 
-    // Start listening
-    app.listen(config.port, () => {
-        console.log(`🚀 Server running on http://localhost:${config.port}`);
+    // Start listening - bind to 0.0.0.0 for VPS/Railway
+    app.listen(config.port, '0.0.0.0', () => {
+        console.log(`🚀 Server running on port ${config.port}`);
         console.log('━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━');
         console.log('Endpoints:');
         console.log(`  GET  /health`);
