@@ -8,6 +8,8 @@ import {
     ScrollView,
     Platform,
     Dimensions,
+    Linking,
+    Image,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
@@ -17,7 +19,9 @@ import { Colors } from '@/constants/Colors';
 import { getStoredUsername, getStoredKeypair, deleteIdentity } from '@/lib/keychain';
 import { clearAllData } from '@/lib/storage';
 import { uint8ToBase58 } from '@/lib/crypto';
-import { fetchConfig, releaseUsername, type AppConfig } from '@/lib/api';
+import { fetchConfig, releaseUsername, uploadAvatar, type AppConfig } from '@/lib/api';
+import { pickImage, type CompressedImage } from '@/lib/imageUtils';
+import { getUserSettings, saveUserSettings, CHAT_BACKGROUND_PRESETS, type UserSettings } from '@/lib/settingsStorage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
 
@@ -26,11 +30,22 @@ export default function SettingsScreen() {
     const [username, setUsername] = useState<string | null>(null);
     const [publicKey, setPublicKey] = useState<string | null>(null);
     const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
+    const [userSettings, setUserSettings] = useState<UserSettings>({});
+    const [avatarUri, setAvatarUri] = useState<string | null>(null);
 
     useEffect(() => {
         loadIdentity();
         loadConfig();
+        loadUserSettings();
     }, []);
+
+    const loadUserSettings = async () => {
+        const settings = await getUserSettings();
+        setUserSettings(settings);
+        if (settings.avatarBase64) {
+            setAvatarUri(`data:image/jpeg;base64,${settings.avatarBase64}`);
+        }
+    };
 
     const loadConfig = async () => {
         const config = await fetchConfig();
@@ -45,6 +60,38 @@ export default function SettingsScreen() {
         setUsername(storedUsername);
         if (keypair) {
             setPublicKey(uint8ToBase58(keypair.publicKey));
+        }
+    };
+
+    const handleAvatarPress = async () => {
+        const image = await pickImage();
+        if (image) {
+            // Optimistic update
+            setAvatarUri(`data:${image.mimeType};base64,${image.base64}`);
+            await saveUserSettings({ avatarBase64: image.base64 });
+
+            // Sync to API
+            if (username) {
+                try {
+                    await uploadAvatar(username, image.base64);
+                    console.log('✅ Avatar synced to cloud');
+                } catch (error) {
+                    console.error('Failed to sync avatar:', error);
+                    // We don't revert local change, as it's still valid locally
+                }
+            }
+
+            if (Platform.OS !== 'web') {
+                Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+            }
+        }
+    };
+
+    const handleBackgroundSelect = async (color: string) => {
+        await saveUserSettings({ chatBackgroundColor: color });
+        setUserSettings(prev => ({ ...prev, chatBackgroundColor: color }));
+        if (Platform.OS !== 'web') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
         }
     };
 
@@ -96,11 +143,20 @@ export default function SettingsScreen() {
                 {/* Identity Card - Compacted */}
                 <View style={[styles.card, styles.identityCard]}>
                     <View style={styles.cardHeader}>
-                        <View style={styles.avatar}>
-                            <Text style={styles.avatarText}>
-                                {username?.slice(0, 2).toUpperCase() || '??'}
-                            </Text>
-                        </View>
+                        <Pressable onPress={handleAvatarPress}>
+                            <View style={styles.avatar}>
+                                {avatarUri ? (
+                                    <Image source={{ uri: avatarUri }} style={styles.avatarImage} />
+                                ) : (
+                                    <Text style={styles.avatarText}>
+                                        {username?.slice(0, 2).toUpperCase() || '??'}
+                                    </Text>
+                                )}
+                                <View style={styles.avatarEditBadge}>
+                                    <Ionicons name="camera" size={10} color={Colors.text} />
+                                </View>
+                            </View>
+                        </Pressable>
                         <View style={styles.identityInfo}>
                             <Text style={styles.username}>@{username || 'unknown'}</Text>
                             <View style={styles.networkBadge}>
@@ -128,24 +184,53 @@ export default function SettingsScreen() {
                     )}
                 </View>
 
+                {/* Appearance Section */}
+                <View style={styles.card}>
+                    <Text style={styles.sectionTitle}>Appearance</Text>
+                    <Text style={styles.settingLabel}>Chat Background</Text>
+                    <View style={styles.colorRow}>
+                        {CHAT_BACKGROUND_PRESETS.map((color) => (
+                            <Pressable
+                                key={color}
+                                style={[
+                                    styles.colorSwatch,
+                                    { backgroundColor: color },
+                                    userSettings.chatBackgroundColor === color && styles.colorSwatchSelected,
+                                ]}
+                                onPress={() => handleBackgroundSelect(color)}
+                            />
+                        ))}
+                    </View>
+                </View>
+
                 {/* Combined System Sections for compactness */}
                 <View style={styles.compactGrid}>
                     <View style={styles.gridHalf}>
                         <Text style={styles.sectionTitle}>Security</Text>
                         <View style={styles.cardCompact}>
-                            <SettingsRow
-                                icon="shield-checkmark-outline"
-                                title="Encrypted"
-                                showChevron={false}
-                                compact
-                            />
+                            <Pressable onPress={() => Alert.alert(
+                                '🔐 End-to-End Encryption',
+                                'All messages are encrypted using X25519-XSalsa20-Poly1305 (NaCl Box). Only you and your recipient can read messages.'
+                            )}>
+                                <SettingsRow
+                                    icon="shield-checkmark-outline"
+                                    title="Encrypted"
+                                    showChevron={true}
+                                    compact
+                                />
+                            </Pressable>
                             <View style={styles.divider} />
-                            <SettingsRow
-                                icon="key-outline"
-                                title="Sovereign"
-                                showChevron={false}
-                                compact
-                            />
+                            <Pressable onPress={() => Alert.alert(
+                                '🔑 Self-Custody Keys',
+                                'Your keys are stored only on your device. No one else has access - not even us. You are the sole owner of your identity.'
+                            )}>
+                                <SettingsRow
+                                    icon="key-outline"
+                                    title="Sovereign"
+                                    showChevron={true}
+                                    compact
+                                />
+                            </Pressable>
                         </View>
                     </View>
 
@@ -159,12 +244,17 @@ export default function SettingsScreen() {
                                 compact
                             />
                             <View style={styles.divider} />
-                            <SettingsRow
-                                icon="logo-github"
-                                title="Source"
-                                showChevron={false}
-                                compact
-                            />
+                            <Pressable onPress={() => {
+                                const url = appConfig?.githubUrl || 'https://github.com/serpepe/KeyApp';
+                                Linking.openURL(url);
+                            }}>
+                                <SettingsRow
+                                    icon="logo-github"
+                                    title="Source"
+                                    showChevron={true}
+                                    compact
+                                />
+                            </Pressable>
                         </View>
                     </View>
                 </View>
@@ -429,5 +519,43 @@ const styles = StyleSheet.create({
         fontWeight: '700',
         color: Colors.error,
         letterSpacing: 1.5,
+    },
+    avatarImage: {
+        width: 50,
+        height: 50,
+        borderRadius: 25,
+    },
+    avatarEditBadge: {
+        position: 'absolute',
+        bottom: -2,
+        right: -2,
+        backgroundColor: Colors.primary,
+        borderRadius: 10,
+        width: 20,
+        height: 20,
+        alignItems: 'center',
+        justifyContent: 'center',
+        borderWidth: 2,
+        borderColor: Colors.background,
+    },
+    settingLabel: {
+        fontSize: 12,
+        color: Colors.textSecondary,
+        marginBottom: 10,
+    },
+    colorRow: {
+        flexDirection: 'row',
+        gap: 12,
+        marginTop: 4,
+    },
+    colorSwatch: {
+        width: 36,
+        height: 36,
+        borderRadius: 18,
+        borderWidth: 2,
+        borderColor: 'transparent',
+    },
+    colorSwatchSelected: {
+        borderColor: Colors.primary,
     },
 });

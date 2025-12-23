@@ -91,4 +91,39 @@ export async function getMessageContent(id: string): Promise<string | null> {
     return await redis.get<string>(key);
 }
 
+/**
+ * Key prefix for user avatars
+ */
+const AVATAR_PREFIX = 'avatar:';
+
+/**
+ * Store a user's avatar (base64 encoded)
+ * @param username - The username
+ * @param avatarBase64 - Base64 encoded image data
+ */
+export async function storeAvatar(username: string, avatarBase64: string): Promise<void> {
+    const key = `${AVATAR_PREFIX}${username}`;
+    // Store avatar indefinitely (no TTL)
+    await redis.set(key, avatarBase64);
+}
+
+/**
+ * Retrieve a user's avatar
+ * @param username - The username
+ * @returns Base64 encoded image data or null
+ */
+export async function getAvatar(username: string): Promise<string | null> {
+    const key = `${AVATAR_PREFIX}${username}`;
+    return await redis.get<string>(key);
+}
+
+/**
+ * Delete a user's avatar
+ * @param username - The username
+ */
+export async function deleteAvatar(username: string): Promise<void> {
+    const key = `${AVATAR_PREFIX}${username}`;
+    await redis.del(key);
+}
+
 export { redis };

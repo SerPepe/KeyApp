@@ -12,6 +12,7 @@ export interface AppConfig {
     network: string;
     version: string;
     commit: string;
+    githubUrl: string;
 }
 
 export interface UsernameCheckResponse {
@@ -398,4 +399,54 @@ export async function getMessageContent(id: string): Promise<string | null> {
         console.error('Failed to fetch message content:', error);
         return null;
     }
+}
+
+// ==================== PROFILE API ====================
+
+/**
+ * Upload user avatar
+ */
+export async function uploadAvatar(username: string, avatarBase64: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/profile/avatar`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, avatarBase64 }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to upload avatar');
+    }
+
+    return response.json();
+}
+
+/**
+ * Get user avatar
+ */
+export async function getAvatar(username: string): Promise<string | null> {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/profile/${username}/avatar`);
+        if (!response.ok) return null;
+        const data = await response.json();
+        return data.avatarBase64 || null;
+    } catch {
+        return null;
+    }
+}
+
+/**
+ * Delete user avatar
+ */
+export async function deleteAvatar(username: string): Promise<{ success: boolean; message: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/profile/${username}/avatar`, {
+        method: 'DELETE',
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to delete avatar');
+    }
+
+    return response.json();
 }

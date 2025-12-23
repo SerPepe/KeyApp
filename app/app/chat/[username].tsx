@@ -31,6 +31,7 @@ import { encryptMessage, getEncryptionKeypair, base64ToUint8, uint8ToBase58 } fr
 import { getStoredKeypair } from '@/lib/keychain';
 import { getPublicKeyByUsername } from '@/lib/api';
 import { type CompressedImage } from '@/lib/imageUtils';
+import { getUserSettings, type UserSettings } from '@/lib/settingsStorage';
 import * as Haptics from 'expo-haptics';
 
 export default function ChatScreen() {
@@ -43,11 +44,13 @@ export default function ChatScreen() {
     const [replyingTo, setReplyingTo] = useState<Message | null>(null);
     const [pendingEmoji, setPendingEmoji] = useState<string | null>(null);
     const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
+    const [backgroundColor, setBackgroundColor] = useState(Colors.background);
     const listRef = useRef<FlatList<Message>>(null);
     const processedSignatures = useRef<Set<string>>(new Set());
 
     useEffect(() => {
         loadChat();
+        loadUserSettings();
 
         // Start polling for new messages every 5 seconds
         const pollInterval = setInterval(() => {
@@ -56,6 +59,13 @@ export default function ChatScreen() {
 
         return () => clearInterval(pollInterval);
     }, [username]);
+
+    const loadUserSettings = async () => {
+        const settings = await getUserSettings();
+        if (settings.chatBackgroundColor) {
+            setBackgroundColor(settings.chatBackgroundColor);
+        }
+    };
 
     const loadChat = async () => {
         const storedMessages = await getMessages(username!);
@@ -465,7 +475,9 @@ export default function ChatScreen() {
 
     const handleReply = (message: Message) => {
         setReplyingTo(message);
-        Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        if (Platform.OS !== 'web') {
+            Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
     };
 
     // Calculate message grouping and render appropriate bubble type
@@ -501,7 +513,7 @@ export default function ChatScreen() {
 
     return (
         <KeyboardAvoidingView
-            style={styles.container}
+            style={[styles.container, { backgroundColor }]}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
             keyboardVerticalOffset={88}
         >

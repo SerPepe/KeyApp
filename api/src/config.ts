@@ -13,6 +13,7 @@ export const config = {
     // App Version Info
     appVersion: process.env.APP_VERSION || '1.0.0',
     gitCommit: process.env.GIT_COMMIT || 'development',
+    githubUrl: process.env.GITHUB_URL || 'https://github.com/serpepe/KeyApp',
 
     // Rate limiting: 1 message per 2 seconds by default
     rateLimit: {

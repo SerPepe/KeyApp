@@ -6,6 +6,7 @@ import * as Haptics from 'expo-haptics';
 import { Colors } from '@/constants/Colors';
 import { Message, deleteMessage } from '@/lib/storage';
 import { parseEmojis, customEmojis, hasCustomEmoji } from '@/lib/emojiRegistry';
+import { Avatar } from './Avatar';
 
 interface MessageBubbleProps {
     message: Message;
@@ -140,6 +141,8 @@ export function MessageBubble({
         );
     };
 
+
+
     const bubbleContent = (
         <View
             style={[
@@ -148,6 +151,16 @@ export function MessageBubble({
                 !isLastInGroup && styles.groupedMargin,
             ]}
         >
+            {!message.isMine && (
+                <View style={styles.avatarContainer}>
+                    {isLastInGroup ? (
+                        <Avatar username={message.chatId} size={28} />
+                    ) : (
+                        <View style={{ width: 28 }} />
+                    )}
+                </View>
+            )}
+
             <Pressable
                 onLongPress={handleLongPress}
                 delayLongPress={300}
@@ -289,5 +302,9 @@ const styles = StyleSheet.create({
         fontSize: 12,
         fontWeight: '600',
         marginTop: 2,
+    },
+    avatarContainer: {
+        marginRight: 8,
+        justifyContent: 'flex-end',
     },
 });

@@ -12,6 +12,7 @@ router.get('/', (_req, res) => {
         network: config.network,
         version: config.appVersion,
         commit: config.gitCommit,
+        githubUrl: config.githubUrl,
         rpcUrl: config.network === 'mainnet-beta'
             ? 'https://api.mainnet-beta.solana.com'
             : 'https://api.devnet.solana.com',
