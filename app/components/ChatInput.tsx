@@ -8,10 +8,12 @@ import {
     Platform,
     Alert,
     Image,
+    Keyboard,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
 import * as Haptics from 'expo-haptics';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { pickImage, takePhoto, requestMediaPermissions, type CompressedImage } from '@/lib/imageUtils';
 
 interface ChatInputProps {
@@ -26,7 +28,24 @@ interface ChatInputProps {
 export function ChatInput({ onSend, onSendImage, onEmojiPress, pendingEmoji, onEmojiInserted, disabled }: ChatInputProps) {
     const [text, setText] = useState('');
     const [selectedImage, setSelectedImage] = useState<CompressedImage | null>(null);
+    const [isKeyboardVisible, setKeyboardVisible] = useState(false);
     const inputRef = useRef<TextInput>(null);
+    const insets = useSafeAreaInsets();
+
+    React.useEffect(() => {
+        const keyboardWillShow = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillShow' : 'keyboardDidShow',
+            () => setKeyboardVisible(true)
+        );
+        const keyboardWillHide = Keyboard.addListener(
+            Platform.OS === 'ios' ? 'keyboardWillHide' : 'keyboardDidHide',
+            () => setKeyboardVisible(false)
+        );
+        return () => {
+            keyboardWillShow.remove();
+            keyboardWillHide.remove();
+        };
+    }, []);
 
     // Handle emoji insertion from picker
     React.useEffect(() => {
@@ -118,7 +137,10 @@ export function ChatInput({ onSend, onSendImage, onEmojiPress, pendingEmoji, onE
     const hasContent = text.trim().length > 0 || selectedImage !== null;
 
     return (
-        <View style={styles.container}>
+        <View style={[
+            styles.container,
+            { paddingBottom: isKeyboardVisible ? 8 : (Platform.OS === 'web' ? 16 : Math.max(insets.bottom, 20)) }
+        ]}>
             {/* Image Preview */}
             {selectedImage && (
                 <View style={styles.previewContainer}>
@@ -207,8 +229,6 @@ const styles = StyleSheet.create({
         borderTopColor: Colors.border,
         paddingHorizontal: 8,
         paddingVertical: 8,
-        paddingBottom: Platform.OS === 'web' ? 16 : 24,
-        alignItems: 'center',
     },
     previewContainer: {
         width: '100%',

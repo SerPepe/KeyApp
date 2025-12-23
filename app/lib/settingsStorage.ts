@@ -58,15 +58,15 @@ export async function clearUserSettings(): Promise<void> {
 // Preset background colors (Japanese Traditional Colors - Nippon Colors)
 // Preset background colors (Japanese Traditional Colors - Nippon Colors)
 // Preset background colors (Japanese Traditional Colors - Nippon Colors)
+// Preset background colors (Japanese Traditional Colors - Nippon Colors)
 export const CHAT_BACKGROUND_PRESETS = [
     '#050505', // Sumi (Black Ink)
     '#2F3E46', // Aojiro-tsurubami (Dark Slate Green)
-    // Removed Iron Blue to save space
-    '#35302D', // Kuro-cha (Black Tea/Brown)
     '#20332E', // Chitose-midori (Pine Green)
     '#4A201E', // Ebicha (Maroon)
     'gradient: ["#0F2027", "#203A43", "#2C5364"]', // Deep Space (Blue Gradient)
-    // Removed Midnight City (Grey Gradient) to fit layout
+    'gradient: ["#232526", "#414345"]', // Midnight City (Grey Gradient) - Re-added as per layout fit (6 + camera = 7)
+    'custom:camera', // Camera placeholder for custom image
 ];
 
 // Accent color presets

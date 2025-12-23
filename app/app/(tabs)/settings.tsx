@@ -19,9 +19,10 @@ import * as Haptics from 'expo-haptics';
 import { Colors } from '@/constants/Colors';
 import { getStoredUsername, getStoredKeypair, deleteIdentity } from '@/lib/keychain';
 import { clearAllData } from '@/lib/storage';
+import { pickImage, requestMediaPermissions } from '@/lib/imageUtils';
 import { uint8ToBase58 } from '@/lib/crypto';
 import { fetchConfig, releaseUsername, uploadAvatar, buildReleaseTransaction, type AppConfig } from '@/lib/api';
-import { pickImage, type CompressedImage } from '@/lib/imageUtils';
+import { type CompressedImage } from '@/lib/imageUtils';
 import { getUserSettings, saveUserSettings, CHAT_BACKGROUND_PRESETS, type UserSettings } from '@/lib/settingsStorage';
 
 const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
@@ -208,15 +209,24 @@ export default function SettingsScreen() {
                     <View style={styles.colorRow}>
                         {CHAT_BACKGROUND_PRESETS.map((color) => {
                             const isGradient = color.startsWith('gradient:');
+                            const isCamera = color === 'custom:camera';
+
                             return (
                                 <Pressable
                                     key={color}
                                     style={[
                                         styles.colorSwatch,
                                         userSettings.chatBackgroundColor === color && styles.colorSwatchSelected,
-                                        !isGradient && { backgroundColor: color }
+                                        !isGradient && !isCamera && { backgroundColor: color },
+                                        isCamera && { alignItems: 'center', justifyContent: 'center', backgroundColor: '#1A1A1A' }
                                     ]}
-                                    onPress={() => handleBackgroundSelect(color)}
+                                    onPress={() => {
+                                        if (isCamera) {
+                                            handleCustomBackground();
+                                        } else {
+                                            handleBackgroundSelect(color);
+                                        }
+                                    }}
                                 >
                                     {isGradient && (
                                         <LinearGradient
@@ -225,6 +235,9 @@ export default function SettingsScreen() {
                                             start={{ x: 0, y: 0 }}
                                             end={{ x: 1, y: 1 }}
                                         />
+                                    )}
+                                    {isCamera && (
+                                        <Ionicons name="camera-outline" size={18} color={Colors.textMuted} />
                                     )}
                                 </Pressable>
                             );

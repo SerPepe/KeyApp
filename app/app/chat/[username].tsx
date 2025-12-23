@@ -9,6 +9,7 @@ import {
     Pressable,
     Alert,
     ActionSheetIOS,
+    Image,
 } from 'react-native';
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, Stack, useRouter } from 'expo-router';
@@ -46,6 +47,7 @@ export default function ChatScreen() {
     const [pendingEmoji, setPendingEmoji] = useState<string | null>(null);
     const [emojiPickerVisible, setEmojiPickerVisible] = useState(false);
     const [backgroundColor, setBackgroundColor] = useState(Colors.background);
+    const [backgroundImage, setBackgroundImage] = useState<string | null>(null);
     const listRef = useRef<FlatList<Message>>(null);
     const processedSignatures = useRef<Set<string>>(new Set());
 
@@ -61,12 +63,7 @@ export default function ChatScreen() {
         return () => clearInterval(pollInterval);
     }, [username]);
 
-    const loadUserSettings = async () => {
-        const settings = await getUserSettings();
-        if (settings.chatBackgroundColor) {
-            setBackgroundColor(settings.chatBackgroundColor);
-        }
-    };
+
 
     const loadChat = async () => {
         const storedMessages = await getMessages(username!);
@@ -107,6 +104,16 @@ export default function ChatScreen() {
         }
     };
 
+    const loadUserSettings = async () => {
+        const settings = await getUserSettings();
+        if (settings.chatBackgroundColor) {
+            setBackgroundColor(settings.chatBackgroundColor);
+        }
+        if (settings.chatBackgroundImage) {
+            setBackgroundImage(settings.chatBackgroundImage);
+        }
+    };
+
     // Poll for new messages via API (fallback for WebSocket)
     const pollForMessages = async () => {
         try {
@@ -137,7 +144,6 @@ export default function ChatScreen() {
                 // Get sender's encryption key
                 if (!senderData?.encryptionKey) continue;
                 const senderEncryptionKey = base64ToUint8(senderData.encryptionKey);
-
                 try {
                     // Decrypt the message
                     const decryptedText = decryptMessage(
@@ -516,7 +522,7 @@ export default function ChatScreen() {
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={88}
+            keyboardVerticalOffset={backgroundColor.startsWith('gradient:') || backgroundColor === 'custom:camera' ? 0 : 88}
         >
             {/* Background Layer (Solid or Gradient) */}
             {
@@ -538,8 +544,8 @@ export default function ChatScreen() {
                     headerBackTitle: 'Back',
                     headerTitleAlign: 'center',
                     headerShadowVisible: false,
-                    headerStyle: { backgroundColor: backgroundColor.startsWith('gradient:') ? 'transparent' : Colors.background },
-                    headerTransparent: backgroundColor.startsWith('gradient:'),
+                    headerStyle: { backgroundColor: (backgroundColor.startsWith('gradient:') || backgroundColor === 'custom:camera') ? 'transparent' : Colors.background },
+                    headerTransparent: backgroundColor.startsWith('gradient:') || backgroundColor === 'custom:camera',
                     headerTintColor: Colors.text,
 
                     headerTitleStyle: { fontWeight: '600' },
