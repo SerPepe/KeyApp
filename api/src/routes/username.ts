@@ -14,15 +14,13 @@ import {
     getFeePayerBalance
 } from '../services/solana.js';
 import { spendingLimitMiddleware } from '../middleware/spendingLimits.js';
+import { getEncryptionKey, storeEncryptionKey, deleteEncryptionKey } from '../services/redis.js';
 
 const router = Router();
 const MIN_FEE_PAYER_SOL = 0.2;
 
 // Username validation regex: alphanumeric, 3-20 chars
 const USERNAME_REGEX = /^[a-zA-Z0-9_]{3,20}$/;
-
-// Encryption keys store (in-memory - could move to Redis/DB)
-const encryptionKeyStore = new Map<string, string>();
 
 /**
  * GET /api/username/:name/check
@@ -79,7 +77,7 @@ router.get('/owner/:pubkey', async (req: Request, res: Response) => {
             });
         }
 
-        const encryptionKey = encryptionKeyStore.get(userAccount.username);
+        const encryptionKey = await getEncryptionKey(userAccount.username);
 
         return res.json({
             username: userAccount.username,
@@ -114,7 +112,7 @@ router.get('/:name', async (req: Request, res: Response) => {
             });
         }
 
-        const encryptionKey = encryptionKeyStore.get(username);
+        const encryptionKey = await getEncryptionKey(username);
 
         return res.json({
             username,
@@ -173,7 +171,7 @@ router.put('/:name/encryption-key', async (req: Request, res: Response) => {
         }
 
         // Store the encryption key
-        encryptionKeyStore.set(username, encryptionKey);
+        await storeEncryptionKey(username, encryptionKey);
         console.log(`🔐 Encryption key updated for @${username}`);
 
         return res.json({
@@ -332,7 +330,7 @@ router.post('/register', spendingLimitMiddleware, async (req: Request, res: Resp
         }
 
         // Store encryption key
-        encryptionKeyStore.set(lowerUsername, encryptionKey);
+        await storeEncryptionKey(lowerUsername, encryptionKey);
 
         console.log(`✅ Username @${lowerUsername} registered: ${signature}`);
 
@@ -383,7 +381,7 @@ router.post('/test', spendingLimitMiddleware, async (req: Request, res: Response
         }
 
         const lowerUsername = username.toLowerCase();
-        encryptionKeyStore.set(lowerUsername, encryptionKey);
+        await storeEncryptionKey(lowerUsername, encryptionKey);
         console.log(`🧪 Test user @${lowerUsername} created`);
 
         return res.json({
@@ -472,7 +470,7 @@ router.post('/:name/release', spendingLimitMiddleware, async (req: Request, res:
             const signature = await relaySignedTransaction(signedTransaction);
 
             // Clear encryption key
-            encryptionKeyStore.delete(username);
+            await deleteEncryptionKey(username);
 
             return res.json({
                 success: true,

@@ -522,7 +522,7 @@ export default function ChatScreen() {
         <KeyboardAvoidingView
             style={styles.container}
             behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-            keyboardVerticalOffset={backgroundColor.startsWith('gradient:') || backgroundColor === 'custom:camera' ? 0 : 88}
+            keyboardVerticalOffset={0}
         >
             {/* Background Layer (Solid or Gradient) */}
             {
@@ -679,4 +679,3 @@ const styles = StyleSheet.create({
         padding: 8,
     },
 });
-
