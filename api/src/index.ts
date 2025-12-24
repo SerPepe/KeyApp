@@ -8,6 +8,7 @@ import configRouter from './routes/config.js';
 import messageRouter from './routes/message.js';
 import blockRouter from './routes/block.js';
 import profileRouter from './routes/profile.js';
+import adminRouter from './routes/admin.js';
 
 const app = express();
 
@@ -43,6 +44,7 @@ app.use('/api/config', configRouter);
 app.use('/api/message', messageRouter);
 app.use('/api/block', blockRouter);
 app.use('/api/profile', profileRouter);
+app.use('/api/admin', adminRouter);
 
 // Start server
 async function start() {
