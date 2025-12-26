@@ -37,14 +37,17 @@ export async function storeKeypair(keypair: KeyPair): Promise<void> {
         await storage.setItemAsync(PRIVATE_KEY_STORAGE_KEY, uint8ToBase64(keypair.secretKey));
         await storage.setItemAsync(PUBLIC_KEY_STORAGE_KEY, uint8ToBase64(keypair.publicKey));
     } else {
+        // Use AFTER_FIRST_UNLOCK to persist across app reinstalls/updates
+        // Keys will survive app deletion and reinstall, and can be restored from iCloud backup
         await SecureStore.setItemAsync(
             PRIVATE_KEY_STORAGE_KEY,
             uint8ToBase64(keypair.secretKey),
-            { keychainAccessible: SecureStore.WHEN_UNLOCKED_THIS_DEVICE_ONLY }
+            { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK }
         );
         await SecureStore.setItemAsync(
             PUBLIC_KEY_STORAGE_KEY,
-            uint8ToBase64(keypair.publicKey)
+            uint8ToBase64(keypair.publicKey),
+            { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK }
         );
     }
 }
@@ -101,7 +104,15 @@ export async function deleteIdentity(): Promise<void> {
  * Store the registered username
  */
 export async function storeUsername(username: string): Promise<void> {
-    await storage.setItemAsync(USERNAME_STORAGE_KEY, username);
+    if (Platform.OS === 'web') {
+        await storage.setItemAsync(USERNAME_STORAGE_KEY, username);
+    } else {
+        await SecureStore.setItemAsync(
+            USERNAME_STORAGE_KEY,
+            username,
+            { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK }
+        );
+    }
 }
 
 /**
