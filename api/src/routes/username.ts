@@ -226,7 +226,7 @@ router.post('/build-transaction', spendingLimitMiddleware, async (req: Request, 
         if (!available) {
             return res.status(409).json({
                 error: 'Username taken',
-                message: 'This username is already registered on-chain',
+                message: 'This username is already registered onchain',
             });
         }
 
@@ -269,7 +269,7 @@ router.post('/build-transaction', spendingLimitMiddleware, async (req: Request, 
 
 /**
  * POST /api/username/register
- * Register a username on-chain
+ * Register a username onchain
  * Accepts a signed transaction (user signed) and adds fee payer signature
  */
 router.post('/register', spendingLimitMiddleware, async (req: Request, res: Response) => {
@@ -297,7 +297,7 @@ router.post('/register', spendingLimitMiddleware, async (req: Request, res: Resp
         if (!available) {
             return res.status(409).json({
                 error: 'Username taken',
-                message: 'This username is already registered on-chain',
+                message: 'This username is already registered onchain',
             });
         }
 
@@ -360,7 +360,7 @@ router.post('/register', spendingLimitMiddleware, async (req: Request, res: Resp
 
 /**
  * POST /api/username/test
- * Create a test user (encryption key only, no on-chain)
+ * Create a test user (encryption key only, no onchain)
  */
 router.post('/test', spendingLimitMiddleware, async (req: Request, res: Response) => {
     try {
@@ -401,7 +401,7 @@ router.post('/test', spendingLimitMiddleware, async (req: Request, res: Response
 
 /**
  * POST /api/username/:name/release
- * Release a username (close on-chain account)
+ * Release a username (close onchain account)
  * Note: Requires program modification to support account closing
  */
 /**
@@ -413,13 +413,13 @@ router.post('/build-release-transaction', spendingLimitMiddleware, async (req: R
         const { username, ownerPublicKey } = req.body;
         const lowerUsername = username.toLowerCase();
 
-        // Check if username exists on-chain
+        // Check if username exists onchain
         const userAccount = await getUserAccount(lowerUsername);
 
         if (!userAccount) {
             return res.status(404).json({
                 error: 'User not found',
-                message: 'Username is not registered on-chain',
+                message: 'Username is not registered onchain',
             });
         }
 
@@ -477,7 +477,7 @@ router.post('/:name/release', spendingLimitMiddleware, async (req: Request, res:
                 username,
                 signature,
                 explorer: `https://explorer.solana.com/tx/${signature}?cluster=devnet`,
-                message: 'Username released! Account closed on-chain.',
+                message: 'Username released! Account closed onchain.',
             });
         }
 

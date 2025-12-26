@@ -66,7 +66,7 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
 }
 
 /**
- * Get user account data from on-chain (raw account parsing)
+ * Get user account data from onchain (raw account parsing)
  */
 export async function getUserAccount(username: string): Promise<{
     owner: string;
@@ -184,7 +184,7 @@ function buildRegisterUsernameData(username: string): Buffer {
 }
 
 /**
- * Register a username on-chain
+ * Register a username onchain
  * The fee payer pays for the transaction and account creation
  * 
  * Note: For proper implementation, the owner would sign client-side.
@@ -201,7 +201,7 @@ export async function registerUsernameOnChain(
     const feePayer = getFeePayer();
     const [userAccountPDA, bump] = getUsernamePDA(username);
 
-    console.log(`📝 Registering @${username} on-chain...`);
+    console.log(`📝 Registering @${username} onchain...`);
     console.log(`   PDA: ${userAccountPDA.toBase58()}`);
     console.log(`   Owner/Payer: ${feePayer.publicKey.toBase58()}`);
 
@@ -385,7 +385,7 @@ function buildCloseAccountData(username: string): Buffer {
 }
 
 /**
- * Close/release a username account on-chain
+ * Close/release a username account onchain
  * This deletes the account and returns rent to the owner
  * 
  * Note: For proper implementation, the owner would sign client-side.

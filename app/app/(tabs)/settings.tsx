@@ -132,7 +132,7 @@ export default function SettingsScreen() {
                         } catch (err) {
                             // Continue even if release fails (might be offline)
                             console.warn('Username release failed:', err);
-                            Alert.alert('Release Failed', 'Could not release username on-chain, but local data will be cleared.');
+                            Alert.alert('Release Failed', 'Could not release username onchain, but local data will be cleared.');
                         }
 
                         await deleteIdentity();

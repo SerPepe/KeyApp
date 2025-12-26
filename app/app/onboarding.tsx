@@ -205,7 +205,7 @@ export default function OnboardingScreen() {
 
                     <Text style={styles.title}>Key</Text>
                     <Text style={styles.subtitle}>
-                        Private. Ephemeral. On-chain.
+                        Private. Ephemeral. Onchain.
                     </Text>
 
                     <Pressable
@@ -263,7 +263,7 @@ export default function OnboardingScreen() {
                         {error && <Text style={styles.error}>{error}</Text>}
                         {!error && isUsernameAvailable === true && username.length >= 3 && (
                             <Text style={[styles.availabilityText, { color: '#4CAF50' }]}>
-                                Username available on-chain!
+                                Username available onchain!
                             </Text>
                         )}
 
