@@ -15,6 +15,7 @@ import { Colors } from '@/constants/Colors';
 import { getChats, type Chat, deleteChat } from '@/lib/storage';
 import { getStoredUsername } from '@/lib/keychain';
 import { ChatListItem } from '@/components/ChatListItem';
+import { onNewMessage } from '@/lib/websocket';
 
 export default function ChatsScreen() {
   const router = useRouter();
@@ -24,6 +25,13 @@ export default function ChatsScreen() {
 
   useEffect(() => {
     loadData();
+
+    // Subscribe to new messages to refresh chat list automatically
+    const unsubscribe = onNewMessage((_message) => {
+      loadData(); // Reload chat list when new message arrives
+    });
+
+    return () => unsubscribe();
   }, []);
 
   const loadData = async () => {

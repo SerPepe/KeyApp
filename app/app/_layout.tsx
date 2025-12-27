@@ -75,7 +75,7 @@ function RootLayoutNav() {
 
   useEffect(() => {
     checkAuth();
-  }, [segments]);
+  }, []);
 
   useEffect(() => {
     if (isCheckingAuth) return;

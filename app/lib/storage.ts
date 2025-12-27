@@ -49,7 +49,14 @@ export async function saveChat(chat: Chat): Promise<void> {
     const existingIndex = chats.findIndex((c) => c.username === chat.username);
 
     if (existingIndex >= 0) {
-        chats[existingIndex] = chat;
+        // Merge with existing chat, properly incrementing unread count
+        const existing = chats[existingIndex];
+        chats[existingIndex] = {
+            ...existing,
+            ...chat,
+            // Increment unread count when receiving new messages (unreadCount > 0)
+            unreadCount: chat.unreadCount > 0 ? existing.unreadCount + chat.unreadCount : chat.unreadCount,
+        };
     } else {
         chats.unshift(chat);
     }

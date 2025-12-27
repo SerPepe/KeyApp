@@ -1,7 +1,7 @@
 import { Connection, PublicKey, ParsedTransactionWithMeta } from '@solana/web3.js';
 import { base64ToUint8, decryptMessage, getEncryptionKeypair } from './crypto';
 import { getStoredKeypair, getStoredUsername } from './keychain';
-import { saveChat, saveMessage, generateMessageId, type Message } from './storage';
+import { saveChat, saveMessage, generateMessageId, isSignatureProcessed, addProcessedSignature, type Message } from './storage';
 import * as Notifications from 'expo-notifications';
 
 const RPC_URL = process.env.EXPO_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com';
@@ -16,6 +16,12 @@ let messageCallbacks: MessageCallback[] = [];
  * Start listening for incoming messages via WebSocket
  */
 export async function startMessageListener(): Promise<void> {
+    // Prevent duplicate listeners
+    if (subscriptionId !== null) {
+        console.log('🔌 WebSocket listener already active, skipping');
+        return;
+    }
+
     const keypair = await getStoredKeypair();
     if (!keypair) {
         console.warn('No keypair found, cannot start listener');
@@ -40,6 +46,13 @@ export async function startMessageListener(): Promise<void> {
 
                 if (!tx) return;
 
+                // Check if already processed to prevent duplicates
+                const txSignature = tx.transaction.signatures[0];
+                if (await isSignatureProcessed(txSignature)) {
+                    console.log('↩️ Message already processed, skipping:', txSignature.slice(0, 8));
+                    return;
+                }
+
                 // Look for memo instruction
                 const memoData = extractMemoFromTransaction(tx);
                 if (!memoData) return;
@@ -48,6 +61,9 @@ export async function startMessageListener(): Promise<void> {
                 const decryptedMessage = await tryDecryptMessage(memoData, tx);
                 if (decryptedMessage) {
                     console.log('📩 New message received!');
+
+                    // Mark as processed immediately to prevent duplicates
+                    await addProcessedSignature(txSignature);
 
                     // Notify callbacks
                     messageCallbacks.forEach((cb) => cb(decryptedMessage));
