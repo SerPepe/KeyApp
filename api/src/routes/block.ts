@@ -2,7 +2,7 @@
  * Block routes - manage user blocking/unblocking
  */
 import { Router, Request, Response } from 'express';
-import { blockUser, unblockUser, isBlocked, getBlockedUsers } from '../services/redis';
+import { blockUser, unblockUser, isBlocked, getBlockedUsers } from '../services/redis.js';
 
 const router = Router();
 
@@ -10,9 +10,15 @@ const router = Router();
  * POST /api/block - Block a user
  * Body: { blockerPubkey, blockedPubkey }
  */
+import { verifySignature } from '../middleware/auth.js';
+
+/**
+ * POST /api/block - Block a user
+ * Body: { blockerPubkey, blockedPubkey, signature, timestamp }
+ */
 router.post('/', async (req: Request, res: Response) => {
     try {
-        const { blockerPubkey, blockedPubkey } = req.body;
+        const { blockerPubkey, blockedPubkey, signature, timestamp } = req.body;
 
         if (!blockerPubkey || !blockedPubkey) {
             return res.status(400).json({ error: 'Missing blockerPubkey or blockedPubkey' });
@@ -20,6 +26,17 @@ router.post('/', async (req: Request, res: Response) => {
 
         if (blockerPubkey === blockedPubkey) {
             return res.status(400).json({ error: 'Cannot block yourself' });
+        }
+
+        // Auth Verification
+        if (!signature || !timestamp) {
+            return res.status(401).json({ error: 'Unauthorized', message: 'Request must be signed' });
+        }
+
+        // Verify: block-user:{blocker}:{blocked}:{timestamp}
+        const expectedMessage = `block-user:${blockerPubkey}:${blockedPubkey}:${timestamp}`;
+        if (!verifySignature(signature, timestamp, expectedMessage, blockerPubkey)) {
+            return res.status(403).json({ error: 'Invalid signature', message: 'Verification failed' });
         }
 
         await blockUser(blockerPubkey, blockedPubkey);
@@ -34,14 +51,25 @@ router.post('/', async (req: Request, res: Response) => {
 
 /**
  * DELETE /api/block - Unblock a user
- * Body: { blockerPubkey, blockedPubkey }
+ * Body: { blockerPubkey, blockedPubkey, signature, timestamp }
  */
 router.delete('/', async (req: Request, res: Response) => {
     try {
-        const { blockerPubkey, blockedPubkey } = req.body;
+        const { blockerPubkey, blockedPubkey, signature, timestamp } = req.body;
 
         if (!blockerPubkey || !blockedPubkey) {
             return res.status(400).json({ error: 'Missing blockerPubkey or blockedPubkey' });
+        }
+
+        // Auth Verification
+        if (!signature || !timestamp) {
+            return res.status(401).json({ error: 'Unauthorized', message: 'Request must be signed' });
+        }
+
+        // Verify: unblock-user:{blocker}:{blocked}:{timestamp}
+        const expectedMessage = `unblock-user:${blockerPubkey}:${blockedPubkey}:${timestamp}`;
+        if (!verifySignature(signature, timestamp, expectedMessage, blockerPubkey)) {
+            return res.status(403).json({ error: 'Invalid signature', message: 'Verification failed' });
         }
 
         await unblockUser(blockerPubkey, blockedPubkey);

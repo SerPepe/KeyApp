@@ -33,9 +33,9 @@ export default function NewChatScreen() {
         setError('');
 
         try {
-            const publicKey = await getPublicKeyByUsername(trimmed);
+            const user = await getPublicKeyByUsername(trimmed);
 
-            if (!publicKey) {
+            if (!user) {
                 setError('User not found');
                 Haptics.notificationAsync(Haptics.NotificationFeedbackType.Error);
                 setIsSearching(false);
@@ -45,7 +45,7 @@ export default function NewChatScreen() {
             // Save chat and navigate
             await saveChat({
                 username: trimmed,
-                publicKey,
+                publicKey: user.publicKey,
                 unreadCount: 0,
             });
 

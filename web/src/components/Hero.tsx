@@ -37,8 +37,8 @@ export default function Hero() {
                         viewport={{ once: true }}
                         transition={{ duration: 1, delay: 1 }}
                     >
-                        <a href="#" className="btn">Download Beta</a>
-                        <a href="#" className="btn btn-secondary">Acquire $KEY</a>
+                        <a href="https://github.com/SerPepe/KeyApp" target="_blank" rel="noopener noreferrer" className="btn">View Source</a>
+                        <a href="https://pump.fun/board" target="_blank" rel="noopener noreferrer" className="btn btn-secondary">Trade $KEY</a>
                     </motion.div>
                 </div>
 

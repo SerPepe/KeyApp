@@ -13,8 +13,8 @@ export async function rateLimitMiddleware(
     res: Response,
     next: NextFunction
 ): Promise<void> {
-    // Use public key from body as identifier, fallback to IP
-    const identifier = req.body?.senderPublicKey || req.ip || 'unknown';
+    // Use public key from body as identifier (support both field names), fallback to IP
+    const identifier = req.body?.senderPubkey || req.body?.senderPublicKey || req.ip || 'unknown';
 
     try {
         await rateLimiter.consume(identifier);

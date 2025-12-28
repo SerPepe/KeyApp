@@ -45,6 +45,9 @@ export interface UserData {
     registeredAt?: string;
 }
 
+import { getStoredKeypair } from './keychain';
+import { signMessage, uint8ToBase64 } from './crypto';
+
 /**
  * Fetch app configuration
  */
@@ -275,6 +278,15 @@ export async function sendMessage(
     recipientPubkey: string,
     senderPubkey: string
 ): Promise<SendMessageResponse> {
+    const keypair = await getStoredKeypair();
+    if (!keypair) {
+        throw new Error('No identity keypair found');
+    }
+
+    const timestamp = Date.now();
+    const messageToSign = `msg:${encryptedMessage}:${timestamp}`;
+    const signature = uint8ToBase64(signMessage(new TextEncoder().encode(messageToSign), keypair.secretKey));
+
     const response = await fetch(`${API_BASE_URL}/api/message/send`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -282,6 +294,8 @@ export async function sendMessage(
             encryptedMessage,
             recipientPubkey,
             senderPubkey,
+            signature,
+            timestamp,
         }),
     });
 
@@ -302,12 +316,23 @@ export async function updateEncryptionKey(
     encryptionKey: string,
     ownerPublicKey: string
 ): Promise<{ success: boolean; message: string }> {
+    const keypair = await getStoredKeypair();
+    if (!keypair) {
+        throw new Error('No identity keypair found');
+    }
+
+    const timestamp = Date.now();
+    const messageToSign = `key-rotation:${encryptionKey}:${timestamp}`;
+    const signature = uint8ToBase64(signMessage(new TextEncoder().encode(messageToSign), keypair.secretKey));
+
     const response = await fetch(`${API_BASE_URL}/api/username/${username}/encryption-key`, {
         method: 'PUT',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
             encryptionKey,
             ownerPublicKey,
+            signature,
+            timestamp,
         }),
     });
 
@@ -360,10 +385,24 @@ export async function fetchInbox(
  * Block a user
  */
 export async function blockUser(blockerPubkey: string, blockedPubkey: string): Promise<{ success: boolean }> {
+    const keypair = await getStoredKeypair();
+    if (!keypair) {
+        throw new Error('No identity keypair found');
+    }
+
+    const timestamp = Date.now();
+    const messageToSign = `block-user:${blockerPubkey}:${blockedPubkey}:${timestamp}`;
+    const signature = uint8ToBase64(signMessage(new TextEncoder().encode(messageToSign), keypair.secretKey));
+
     const response = await fetch(`${API_BASE_URL}/api/block`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blockerPubkey, blockedPubkey }),
+        body: JSON.stringify({
+            blockerPubkey,
+            blockedPubkey,
+            signature,
+            timestamp
+        }),
     });
 
     if (!response.ok) {
@@ -378,10 +417,24 @@ export async function blockUser(blockerPubkey: string, blockedPubkey: string): P
  * Unblock a user
  */
 export async function unblockUser(blockerPubkey: string, blockedPubkey: string): Promise<{ success: boolean }> {
+    const keypair = await getStoredKeypair();
+    if (!keypair) {
+        throw new Error('No identity keypair found');
+    }
+
+    const timestamp = Date.now();
+    const messageToSign = `unblock-user:${blockerPubkey}:${blockedPubkey}:${timestamp}`;
+    const signature = uint8ToBase64(signMessage(new TextEncoder().encode(messageToSign), keypair.secretKey));
+
     const response = await fetch(`${API_BASE_URL}/api/block`, {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ blockerPubkey, blockedPubkey }),
+        body: JSON.stringify({
+            blockerPubkey,
+            blockedPubkey,
+            signature,
+            timestamp
+        }),
     });
 
     if (!response.ok) {
@@ -442,10 +495,24 @@ export async function getMessageContent(id: string): Promise<string | null> {
  * Upload user avatar
  */
 export async function uploadAvatar(username: string, avatarBase64: string): Promise<{ success: boolean; message: string }> {
+    const keypair = await getStoredKeypair();
+    if (!keypair) {
+        throw new Error('No identity keypair found');
+    }
+
+    const timestamp = Date.now();
+    const messageToSign = `avatar-upload:${username}:${timestamp}`;
+    const signature = uint8ToBase64(signMessage(new TextEncoder().encode(messageToSign), keypair.secretKey));
+
     const response = await fetch(`${API_BASE_URL}/api/profile/avatar`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ username, avatarBase64 }),
+        body: JSON.stringify({
+            username,
+            avatarBase64,
+            signature,
+            timestamp
+        }),
     });
 
     if (!response.ok) {
@@ -474,8 +541,22 @@ export async function getAvatar(username: string): Promise<string | null> {
  * Delete user avatar
  */
 export async function deleteAvatar(username: string): Promise<{ success: boolean; message: string }> {
+    const keypair = await getStoredKeypair();
+    if (!keypair) {
+        throw new Error('No identity keypair found');
+    }
+
+    const timestamp = Date.now();
+    const messageToSign = `avatar-delete:${username}:${timestamp}`;
+    const signature = uint8ToBase64(signMessage(new TextEncoder().encode(messageToSign), keypair.secretKey));
+
     const response = await fetch(`${API_BASE_URL}/api/profile/${username}/avatar`, {
         method: 'DELETE',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            signature,
+            timestamp
+        }),
     });
 
     if (!response.ok) {

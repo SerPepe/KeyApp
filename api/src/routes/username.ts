@@ -134,23 +134,41 @@ router.get('/:name', async (req: Request, res: Response) => {
  * Update encryption key for an existing user
  * This is needed after server restart when in-memory store is cleared
  */
+// ... imports
+import { verifySignature } from '../middleware/auth.js';
+
+// ... existing code
+
+/**
+ * PUT /api/username/:name/encryption-key
+ * Update encryption key for an existing user
+ * This is needed after server restart when in-memory store is cleared
+ */
 router.put('/:name/encryption-key', async (req: Request, res: Response) => {
     try {
         const { name } = req.params;
-        const { encryptionKey, ownerPublicKey } = req.body;
+        const { encryptionKey, ownerPublicKey, signature, timestamp } = req.body;
         const username = name.toLowerCase();
 
-        if (!encryptionKey) {
-            return res.status(400).json({
-                error: 'Missing encryptionKey',
-                message: 'Encryption key is required',
+        if (!encryptionKey) return res.status(400).json({ error: 'Missing encryptionKey' });
+        if (!ownerPublicKey) return res.status(400).json({ error: 'Missing ownerPublicKey' });
+
+        // Auth Verification
+        if (!signature || !timestamp) {
+            return res.status(401).json({
+                error: 'Unauthorized',
+                message: 'Request must be signed'
             });
         }
 
-        if (!ownerPublicKey) {
-            return res.status(400).json({
-                error: 'Missing ownerPublicKey',
-                message: 'Owner public key is required for verification',
+        // Verify signature: key-rotation:{encryptionKey}:{timestamp}
+        const expectedMessage = `key-rotation:${encryptionKey}:${timestamp}`;
+        const isValid = verifySignature(signature, timestamp, expectedMessage, ownerPublicKey);
+
+        if (!isValid) {
+            return res.status(403).json({
+                error: 'Invalid signature',
+                message: 'Signature verification failed'
             });
         }
 

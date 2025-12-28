@@ -55,11 +55,10 @@ export default function Treasury() {
                         viewport={{ once: true }}
                         transition={{ duration: 0.8, delay: 0.5 }}
                     >
-                        <div className="address-bar" onClick={handleCopy}>
-                            <span className="mono">{address}</span>
-                            {copied ? <Check size={16} className="signal" /> : <Copy size={16} className="copy-icon" />}
+                        {/* Address hidden until mainnet deployment */}
+                        <div className="address-bar" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
+                            <span className="mono">Treasury Opening Soon</span>
                         </div>
-                        <p className="mono" style={{ fontSize: '0.75rem', opacity: 0.4, marginTop: '1rem' }}>Click to copy address. All SOL contributes to the Relayer tank.</p>
                     </motion.div>
 
                     <div className="qr-container">

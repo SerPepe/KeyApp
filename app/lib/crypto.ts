@@ -3,6 +3,7 @@ import 'react-native-get-random-values';
 
 import nacl from 'tweetnacl';
 import bs58 from 'bs58';
+import { Transaction, Keypair } from '@solana/web3.js';
 
 export interface KeyPair {
     publicKey: Uint8Array;
@@ -185,49 +186,20 @@ export function signTransaction(transactionBase64: string, secretKey: Uint8Array
     // Decode the transaction
     const txBytes = base64ToUint8(transactionBase64);
 
-    // For Solana transactions, we need to:
-    // 1. Get the message part (everything after signatures)
-    // 2. Sign that message
-    // 3. Insert the signature
+    // Reconstruct transaction object
+    const transaction = Transaction.from(txBytes);
 
-    // Transaction format:
-    // - signature_count (compact-u16)
-    // - signatures array (signature_count * 64 bytes)
-    // - message (rest of bytes)
+    // Create signer instance
+    const keypair = Keypair.fromSecretKey(secretKey);
 
-    // Read signature count (compact-u16, usually just 1 byte for small counts)
-    let offset = 0;
-    const sigCount = txBytes[offset];
-    offset += 1;
+    // partialSign adds the signature to the transaction
+    transaction.partialSign(keypair);
 
-    // Skip existing signatures (may be empty/zeroed placeholders)
-    const signaturesStart = offset;
-    offset += sigCount * 64;
+    // Serialize back to base64
+    const serialized = transaction.serialize({
+        requireAllSignatures: false,
+        verifySignatures: false,
+    });
 
-    // The message to sign is everything from offset onwards
-    const message = txBytes.slice(offset);
-
-    // Sign the message with Ed25519
-    const signature = nacl.sign.detached(message, secretKey);
-
-    // Build the signed transaction
-    // The first signature slot is for fee payer, second would be for user
-    // Since user is a required signer, we need to put our signature in the right slot
-
-    // For now, we put the user signature in the second slot (index 1)
-    // Fee payer will add theirs later
-    const signedTx = new Uint8Array(txBytes.length);
-    signedTx.set(txBytes);
-
-    // If there are 2 signature slots and slot 1 is empty, put user sig there
-    // Otherwise put in slot 0 (will be overwritten by fee payer if needed)
-    if (sigCount >= 2) {
-        // Put user signature in second slot
-        signedTx.set(signature, signaturesStart + 64);
-    } else {
-        // Put in first slot
-        signedTx.set(signature, signaturesStart);
-    }
-
-    return uint8ToBase64(signedTx);
+    return uint8ToBase64(serialized);
 }

@@ -4,14 +4,24 @@ import { redis, deleteEncryptionKey, deleteAvatar } from '../services/redis.js';
 const router = Router();
 
 // Admin secret key - must be set in environment
-const ADMIN_SECRET = process.env.ADMIN_SECRET || 'dev_admin_secret';
+// Admin secret key - must be set in environment
+const ADMIN_SECRET = process.env.ADMIN_SECRET;
+
+if (!ADMIN_SECRET || ADMIN_SECRET === 'dev_admin_secret') {
+    if (process.env.NODE_ENV === 'production') {
+        throw new Error('❌ FATAL: ADMIN_SECRET is not set or is using default in production');
+    }
+    console.warn('⚠️  Warning: Using default/unsafe ADMIN_SECRET');
+}
 
 /**
  * Middleware to check admin secret
  */
 const adminAuth = (req: Request, res: Response, next: Function) => {
     const authHeader = req.headers.authorization;
-    if (!authHeader || authHeader !== `Bearer ${ADMIN_SECRET}`) {
+    const activeSecret = ADMIN_SECRET || 'dev_admin_secret';
+
+    if (!authHeader || authHeader !== `Bearer ${activeSecret}`) {
         return res.status(401).json({ error: 'Unauthorized' });
     }
     next();

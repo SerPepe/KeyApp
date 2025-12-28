@@ -26,10 +26,15 @@ const MIN_FEE_PAYER_SOL = 0.05;
 // Maximum memo size (Solana limit is ~800 bytes for memo)
 const MAX_MEMO_SIZE = 750;
 
+// ... imports
+import { verifySignature } from '../middleware/auth.js';
+
 interface SendMessageRequest {
     encryptedMessage: string;  // Base64 encoded encrypted message
     recipientPubkey: string;   // Recipient's Solana public key
     senderPubkey: string;      // Sender's public key (for rate limiting)
+    signature: string;         // Ed25519 signature
+    timestamp: number;         // Unix timestamp
 }
 
 /**
@@ -39,27 +44,35 @@ interface SendMessageRequest {
  */
 router.post('/send', rateLimitMiddleware, spendingLimitMiddleware, async (req: Request, res: Response) => {
     try {
-        const { encryptedMessage, recipientPubkey, senderPubkey } = req.body as SendMessageRequest;
+        const {
+            encryptedMessage,
+            recipientPubkey,
+            senderPubkey,
+            signature,
+            timestamp
+        } = req.body as SendMessageRequest;
 
         // Validation
-        if (!encryptedMessage) {
-            return res.status(400).json({
-                error: 'Missing encryptedMessage',
-                message: 'Encrypted message is required',
+        if (!encryptedMessage) return res.status(400).json({ error: 'Missing encryptedMessage' });
+        if (!recipientPubkey) return res.status(400).json({ error: 'Missing recipientPubkey' });
+        if (!senderPubkey) return res.status(400).json({ error: 'Missing senderPubkey' });
+
+        // Auth Verification
+        if (!signature || !timestamp) {
+            return res.status(401).json({
+                error: 'Unauthorized',
+                message: 'Request must be signed'
             });
         }
 
-        if (!recipientPubkey) {
-            return res.status(400).json({
-                error: 'Missing recipientPubkey',
-                message: 'Recipient public key is required',
-            });
-        }
+        // Verify signature: msg:{encryptedMessage}:{timestamp}
+        const expectedMessage = `msg:${encryptedMessage}:${timestamp}`;
+        const isValid = verifySignature(signature, timestamp, expectedMessage, senderPubkey);
 
-        if (!senderPubkey) {
-            return res.status(400).json({
-                error: 'Missing senderPubkey',
-                message: 'Sender public key is required',
+        if (!isValid) {
+            return res.status(403).json({
+                error: 'Invalid signature',
+                message: 'Signature verification failed'
             });
         }
 
@@ -150,7 +163,7 @@ router.post('/send', rateLimitMiddleware, spendingLimitMiddleware, async (req: R
         transaction.sign(feePayer);
 
         // Send transaction
-        const signature = await connection.sendRawTransaction(
+        const signatureStr = await connection.sendRawTransaction(
             transaction.serialize(),
             {
                 skipPreflight: false,
@@ -160,16 +173,16 @@ router.post('/send', rateLimitMiddleware, spendingLimitMiddleware, async (req: R
 
         // Wait for confirmation
         await connection.confirmTransaction(
-            { signature, blockhash, lastValidBlockHeight },
+            { signature: signatureStr, blockhash, lastValidBlockHeight },
             'confirmed'
         );
 
-        console.log(`✅ Message sent: ${signature}`);
+        console.log(`✅ Message sent: ${signatureStr}`);
 
         return res.json({
             success: true,
-            signature,
-            explorer: `https://explorer.solana.com/tx/${signature}?cluster=devnet`,
+            signature: signatureStr,
+            explorer: `https://explorer.solana.com/tx/${signatureStr}?cluster=devnet`,
         });
 
     } catch (error) {
