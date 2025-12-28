@@ -5,8 +5,11 @@ import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '@/constants/Colors';
 
-const { width } = Dimensions.get('window');
-const TAB_WIDTH = width * 0.55;
+const windowWidth = Dimensions.get('window').width;
+// On web, use a fixed reasonable width; on mobile, scale with screen
+const TAB_WIDTH = Platform.OS === 'web'
+    ? Math.min(windowWidth * 0.55, 220)
+    : windowWidth * 0.55;
 const ITEM_WIDTH = TAB_WIDTH / 2;
 
 interface TabBarProps {
@@ -81,7 +84,10 @@ const styles = StyleSheet.create({
     container: {
         position: 'absolute',
         bottom: 34,
-        width: width,
+        // On web, center the tab bar with a fixed width container
+        ...(Platform.OS === 'web'
+            ? { left: 0, right: 0 }
+            : { width: windowWidth }),
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1000,

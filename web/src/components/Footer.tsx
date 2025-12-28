@@ -27,6 +27,7 @@ export default function Footer() {
                 <a href="https://github.com/key-foundation" target="_blank" rel="noopener noreferrer">Manifesto</a>
                 <Link href="/docs">Technical Paper</Link>
                 <a href="https://github.com/key-foundation" target="_blank" rel="noopener noreferrer">Source Code</a>
+                <Link href="/privacy">Privacy Policy</Link>
                 <a href="#" target="_blank" rel="noopener noreferrer">$KEY Chart</a>
                 <a href="https://twitter.com/keyfoundation" target="_blank" rel="noopener noreferrer">Twitter</a>
             </nav>

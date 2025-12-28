@@ -384,6 +384,12 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: 20,
         paddingTop: 16,
+        // Web: center content with max-width for better desktop experience
+        ...(Platform.OS === 'web' ? {
+            maxWidth: 500,
+            alignSelf: 'center',
+            width: '100%',
+        } : {}) as any,
     },
     card: {
         backgroundColor: 'rgba(255, 255, 255, 0.03)',
