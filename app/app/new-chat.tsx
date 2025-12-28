@@ -136,12 +136,6 @@ const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
-        // Web: center content with max-width for better desktop experience
-        ...(Platform.OS === 'web' ? {
-            maxWidth: 500,
-            alignSelf: 'center',
-            width: '100%',
-        } : {}) as any,
     },
     headerTitle: {
         fontSize: 20,

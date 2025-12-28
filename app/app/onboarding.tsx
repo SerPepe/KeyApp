@@ -319,12 +319,7 @@ const styles = StyleSheet.create({
         flex: 1,
         backgroundColor: DEEP_CHARCOAL,
         justifyContent: 'center',
-        // Web: center content with max-width for better desktop experience
-        ...(Platform.OS === 'web' ? {
-            maxWidth: 600,
-            alignSelf: 'center',
-            width: '100%',
-        } : {}) as any,
+        alignItems: 'center',
     },
     meshGradient: {
         ...StyleSheet.absoluteFillObject,
@@ -359,6 +354,11 @@ const styles = StyleSheet.create({
     content: {
         alignItems: 'center',
         paddingHorizontal: 24,
+        width: '100%',
+        // Web: center content with max-width for better desktop experience
+        ...(Platform.OS === 'web' ? {
+            maxWidth: 500,
+        } : {}) as any,
     },
     title: {
         fontSize: 52,
