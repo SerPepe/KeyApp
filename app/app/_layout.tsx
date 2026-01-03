@@ -144,102 +144,100 @@ function RootLayoutNav() {
         const { initStorageEncryption } = await import('@/lib/storage');
         initStorageEncryption(keypair.secretKey);
 
+        // Encryption key sync removed (now stored on-chain)
+
+        // Start WebSocket listener for incoming messages
         try {
-          // Encryption key sync removed (now stored on-chain)
-
-
-          // Start WebSocket listener for incoming messages
-          try {
-            await startMessageListener();
-          } catch (err) {
-            console.warn('Failed to start message listener:', err);
-          }
+          await startMessageListener();
+        } catch (err) {
+          console.warn('Failed to start message listener:', err);
         }
 
-      // Consider the user onboarded only if both key and username exist
-      setHasIdentity(!!keypair && !!resolvedUsername);
-      } catch (error) {
-        console.error('Auth check failed:', error);
-        setHasIdentity(false);
-      } finally {
-        setIsCheckingAuth(false);
-      }
-    };
-
-    // Show loading state while checking auth
-    if (isCheckingAuth) {
-      return (
-        <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center' }}>
-          <Text style={{ color: Colors.primary, fontSize: 24 }}>⚿</Text>
-        </View>
-      );
+        // Consider the user onboarded only if both key and username exist
+        setHasIdentity(!!keypair && !!resolvedUsername);
+      } // Close if (keypair && resolvedUsername)
+    } catch (error) {
+      console.error('Auth check failed:', error);
+      setHasIdentity(false);
+    } finally {
+      setIsCheckingAuth(false);
     }
+  };
 
+  // Show loading state while checking auth
+  if (isCheckingAuth) {
     return (
-      <View style={{ flex: 1, backgroundColor: Colors.background }}>
-        {/* Web Security Warning */}
-        {Platform.OS === 'web' && (
-          <View style={styles.webWarning}>
-            <Text style={styles.webWarningText}>
-              ⚠️ Web version stores keys in localStorage (less secure). Use the mobile app for best security.
-            </Text>
-          </View>
-        )}
-
-        <ThemeProvider value={KeyDarkTheme}>
-          <Stack
-            screenOptions={{
-              headerStyle: { backgroundColor: Colors.background },
-              headerTintColor: Colors.text,
-              contentStyle: { backgroundColor: Colors.background },
-              animation: 'slide_from_right',
-            }}
-          >
-            <Stack.Screen
-              name="onboarding"
-              options={{ headerShown: false, gestureEnabled: false }}
-            />
-            <Stack.Screen
-              name="(tabs)"
-              options={{ headerShown: false }}
-            />
-            <Stack.Screen
-              name="new-chat"
-              options={{
-                presentation: 'modal',
-                headerShown: true,
-                title: 'New Chat',
-                animation: 'slide_from_bottom',
-              }}
-            />
-            <Stack.Screen
-              name="chat/[username]"
-              options={{
-                headerShown: true,
-                headerBackTitle: 'Back',
-              }}
-            />
-            <Stack.Screen
-              name="modal"
-              options={{ presentation: 'modal' }}
-            />
-          </Stack>
-        </ThemeProvider>
+      <View style={{ flex: 1, backgroundColor: Colors.background, alignItems: 'center', justifyContent: 'center' }}>
+        <Text style={{ color: Colors.primary, fontSize: 24 }}>⚿</Text>
       </View>
     );
   }
 
-  const styles = StyleSheet.create({
-    webWarning: {
-      backgroundColor: '#FFA726',
-      paddingVertical: 8,
-      paddingHorizontal: 16,
-      alignItems: 'center',
-    },
-    webWarningText: {
-      color: '#000',
-      fontSize: 12,
-      fontWeight: '600',
-      textAlign: 'center',
-    },
-  });
+  return (
+    <View style={{ flex: 1, backgroundColor: Colors.background }}>
+      {/* Web Security Warning */}
+      {Platform.OS === 'web' && (
+        <View style={styles.webWarning}>
+          <Text style={styles.webWarningText}>
+            ⚠️ Web version stores keys in localStorage (less secure). Use the mobile app for best security.
+          </Text>
+        </View>
+      )}
+
+      <ThemeProvider value={KeyDarkTheme}>
+        <Stack
+          screenOptions={{
+            headerStyle: { backgroundColor: Colors.background },
+            headerTintColor: Colors.text,
+            contentStyle: { backgroundColor: Colors.background },
+            animation: 'slide_from_right',
+          }}
+        >
+          <Stack.Screen
+            name="onboarding"
+            options={{ headerShown: false, gestureEnabled: false }}
+          />
+          <Stack.Screen
+            name="(tabs)"
+            options={{ headerShown: false }}
+          />
+          <Stack.Screen
+            name="new-chat"
+            options={{
+              presentation: 'modal',
+              headerShown: true,
+              title: 'New Chat',
+              animation: 'slide_from_bottom',
+            }}
+          />
+          <Stack.Screen
+            name="chat/[username]"
+            options={{
+              headerShown: true,
+              headerBackTitle: 'Back',
+            }}
+          />
+          <Stack.Screen
+            name="modal"
+            options={{ presentation: 'modal' }}
+          />
+        </Stack>
+      </ThemeProvider>
+    </View>
+  );
+}
+
+const styles = StyleSheet.create({
+  webWarning: {
+    backgroundColor: '#FFA726',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    alignItems: 'center',
+  },
+  webWarningText: {
+    color: '#000',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+});
