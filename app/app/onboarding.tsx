@@ -128,7 +128,8 @@ export default function OnboardingScreen() {
             console.log('📦 Building transaction...');
             const { transaction: unsignedTx } = await buildUsernameTransaction(
                 trimmedUsername,
-                publicKeyBase58  // Use base58 for Solana
+                publicKeyBase58,  // Use base58 for Solana
+                encryptionKeyBase64 // Pass encryption key
             );
 
             // 4. Sign transaction with user's keypair

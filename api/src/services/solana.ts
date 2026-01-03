@@ -12,7 +12,7 @@ import bs58 from 'bs58';
 import { config } from '../config.js';
 
 // Program ID from deployed Anchor program
-const PROGRAM_ID = new PublicKey('H2p5dFRDcqFdFgDvUBDaVmH8L6zuwvokp1pbzfL8A3DN');
+const PROGRAM_ID = new PublicKey('96hG67JxhNEptr1LkdtDcrqvtWiHH3x4GibDBcdh4MYQ');
 
 // Initialize connection to Solana
 export const connection = new Connection(config.solanaRpcUrl, 'confirmed');
@@ -68,17 +68,17 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
 /**
  * Get user account data from onchain (raw account parsing)
  */
-export async function getUserAccount(username: string): Promise<{
-    owner: string;
-    username: string;
-    createdAt: number;
-    bump: number;
-} | null> {
+owner: string;
+username: string;
+createdAt: number;
+bump: number;
+encryptionKey: string; // Base64 encoded
+} | null > {
     try {
         const [pda] = getUsernamePDA(username);
         const accountInfo = await connection.getAccountInfo(pda);
 
-        if (!accountInfo) {
+        if(!accountInfo) {
             return null;
         }
 
@@ -104,14 +104,24 @@ export async function getUserAccount(username: string): Promise<{
 
         // Bump (1 byte)
         const bump = data.readUInt8(offset);
+        offset += 1;
+
+        // Encryption Key (32 bytes)
+        // If account data is too short (old account), return empty or handle error
+        // But for now assuming clean environment or new accounts
+        const encryptionKeyBuf = data.slice(offset, offset + 32);
+        const encryptionKey = encryptionKeyBuf.length === 32
+            ? encryptionKeyBuf.toString('base64')
+            : '';
 
         return {
             owner,
             username: usernameStr,
             createdAt,
             bump,
+            encryptionKey,
         };
-    } catch (error) {
+    } catch(error) {
         console.error('Error fetching user account:', error);
         return null;
     }
@@ -120,12 +130,12 @@ export async function getUserAccount(username: string): Promise<{
 /**
  * Lookup a username by owner public key (for account recovery)
  */
-export async function findUserByOwner(ownerPubkey: string): Promise<{
-    owner: string;
-    username: string;
-    createdAt: number;
-    bump: number;
-} | null> {
+owner: string;
+username: string;
+createdAt: number;
+bump: number;
+encryptionKey: string;
+} | null > {
     try {
         const owner = new PublicKey(ownerPubkey);
         const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
@@ -139,7 +149,7 @@ export async function findUserByOwner(ownerPubkey: string): Promise<{
             ],
         });
 
-        if (accounts.length === 0) return null;
+        if(accounts.length === 0) return null;
 
         const data = accounts[0].account.data as Buffer;
 
@@ -153,14 +163,21 @@ export async function findUserByOwner(ownerPubkey: string): Promise<{
         const createdAt = Number(data.readBigInt64LE(offset));
         offset += 8;
         const bump = data.readUInt8(offset);
+        offset += 1;
+
+        const encryptionKeyBuf = data.slice(offset, offset + 32);
+        const encryptionKey = encryptionKeyBuf.length === 32
+            ? encryptionKeyBuf.toString('base64')
+            : '';
 
         return {
             owner: ownerKey,
             username: usernameStr,
             createdAt,
             bump,
+            encryptionKey,
         };
-    } catch (error) {
+    } catch(error) {
         console.error('Error finding user by owner:', error);
         return null;
     }
@@ -170,7 +187,7 @@ export async function findUserByOwner(ownerPubkey: string): Promise<{
  * Build the instruction data for registerUsername
  * Anchor discriminator + borsh-serialized args
  */
-function buildRegisterUsernameData(username: string): Buffer {
+function buildRegisterUsernameData(username: string, encryptionKey: Buffer): Buffer {
     // Anchor discriminator for "register_username" 
     // = first 8 bytes of sha256('global:register_username')
     const discriminator = Buffer.from([0x86, 0x36, 0x7b, 0xb5, 0x1c, 0x97, 0x24, 0x00]);
@@ -180,7 +197,12 @@ function buildRegisterUsernameData(username: string): Buffer {
     const lengthBuf = Buffer.alloc(4);
     lengthBuf.writeUInt32LE(usernameBytes.length);
 
-    return Buffer.concat([discriminator, lengthBuf, usernameBytes]);
+    // Encryption Key: 32 bytes
+    if (!encryptionKey || encryptionKey.length !== 32) {
+        throw new Error('Encryption key must be 32 bytes');
+    }
+
+    return Buffer.concat([discriminator, lengthBuf, usernameBytes, encryptionKey]);
 }
 
 /**
@@ -196,7 +218,8 @@ function buildRegisterUsernameData(username: string): Buffer {
  */
 export async function registerUsernameOnChain(
     username: string,
-    _ownerPubkey: string // Ignored for now - fee payer is owner
+    _ownerPubkey: string, // Ignored for now
+    encryptionKey: string // Base64 encoded
 ): Promise<string> {
     const feePayer = getFeePayer();
     const [userAccountPDA, bump] = getUsernamePDA(username);
@@ -205,12 +228,12 @@ export async function registerUsernameOnChain(
     console.log(`   PDA: ${userAccountPDA.toBase58()}`);
     console.log(`   Owner/Payer: ${feePayer.publicKey.toBase58()}`);
 
-    // Calculate space for UserAccount struct
-    // 8 (discriminator) + 32 (owner) + 4+20 (username string) + 8 (created_at) + 1 (bump)
-    const space = 8 + 32 + 4 + 20 + 8 + 1;
+    // 8 (discriminator) + 32 (owner) + 4+20 (username string) + 8 (created_at) + 1 (bump) + 32 (encryption_key)
+    const space = 8 + 32 + 4 + 20 + 8 + 1 + 32;
     const lamports = await connection.getMinimumBalanceForRentExemption(space);
 
-    const instructionData = buildRegisterUsernameData(username);
+    const encryptionKeyBuf = Buffer.from(encryptionKey, 'base64');
+    const instructionData = buildRegisterUsernameData(username, encryptionKeyBuf);
 
     const instruction = new TransactionInstruction({
         keys: [
@@ -249,7 +272,8 @@ export async function registerUsernameOnChain(
  */
 export async function buildRegisterUsernameTransaction(
     username: string,
-    ownerPubkey: string
+    ownerPubkey: string,
+    encryptionKey: string // Base64 encoded
 ): Promise<{
     transaction: Transaction;
     blockhash: string;
@@ -264,10 +288,11 @@ export async function buildRegisterUsernameTransaction(
     console.log(`   Fee Payer: ${feePayer.publicKey.toBase58().slice(0, 8)}...`);
     console.log(`   PDA: ${userAccountPDA.toBase58()}`);
 
-    const instructionData = buildRegisterUsernameData(username);
+    const encryptionKeyBuf = Buffer.from(encryptionKey, 'base64');
+    const instructionData = buildRegisterUsernameData(username, encryptionKeyBuf);
 
     // Calculate rent for the PDA account
-    const accountSpace = 8 + 32 + 4 + 20 + 8 + 1; // discriminator + struct
+    const accountSpace = 8 + 32 + 4 + 20 + 8 + 1 + 32; // discriminator + struct
     const pdaRentLamports = await connection.getMinimumBalanceForRentExemption(accountSpace);
 
     // Owner account must ALSO remain rent-exempt after paying for PDA creation

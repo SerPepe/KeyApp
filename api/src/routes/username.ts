@@ -14,7 +14,9 @@ import {
     getFeePayerBalance
 } from '../services/solana.js';
 import { spendingLimitMiddleware } from '../middleware/spendingLimits.js';
-import { getEncryptionKey, storeEncryptionKey, deleteEncryptionKey } from '../services/redis.js';
+import { spendingLimitMiddleware } from '../middleware/spendingLimits.js';
+// Removed: getEncryptionKey, storeEncryptionKey from redis.js
+// import { getEncryptionKey, storeEncryptionKey, deleteEncryptionKey } from '../services/redis.js';
 
 const router = Router();
 const MIN_FEE_PAYER_SOL = 0.2;
@@ -77,7 +79,8 @@ router.get('/owner/:pubkey', async (req: Request, res: Response) => {
             });
         }
 
-        const encryptionKey = await getEncryptionKey(userAccount.username);
+        // Read encryption key from on-chain account data
+        const encryptionKey = userAccount.encryptionKey;
 
         return res.json({
             username: userAccount.username,
@@ -112,7 +115,8 @@ router.get('/:name', async (req: Request, res: Response) => {
             });
         }
 
-        const encryptionKey = await getEncryptionKey(username);
+        // Read encryption key from on-chain account data
+        const encryptionKey = userAccount.encryptionKey;
 
         return res.json({
             username,
@@ -144,66 +148,14 @@ import { verifySignature } from '../middleware/auth.js';
  * Update encryption key for an existing user
  * This is needed after server restart when in-memory store is cleared
  */
-router.put('/:name/encryption-key', async (req: Request, res: Response) => {
-    try {
-        const { name } = req.params;
-        const { encryptionKey, ownerPublicKey, signature, timestamp } = req.body;
-        const username = name.toLowerCase();
-
-        if (!encryptionKey) return res.status(400).json({ error: 'Missing encryptionKey' });
-        if (!ownerPublicKey) return res.status(400).json({ error: 'Missing ownerPublicKey' });
-
-        // Auth Verification
-        if (!signature || !timestamp) {
-            return res.status(401).json({
-                error: 'Unauthorized',
-                message: 'Request must be signed'
-            });
-        }
-
-        // Verify signature: key-rotation:{encryptionKey}:{timestamp}
-        const expectedMessage = `key-rotation:${encryptionKey}:${timestamp}`;
-        const isValid = verifySignature(signature, timestamp, expectedMessage, ownerPublicKey);
-
-        if (!isValid) {
-            return res.status(403).json({
-                error: 'Invalid signature',
-                message: 'Signature verification failed'
-            });
-        }
-
-        // Verify the username exists and belongs to this owner
-        const userAccount = await getUserAccount(username);
-        if (!userAccount) {
-            return res.status(404).json({
-                error: 'User not found',
-                message: `Username @${username} is not registered`,
-            });
-        }
-
-        if (userAccount.owner !== ownerPublicKey) {
-            return res.status(403).json({
-                error: 'Unauthorized',
-                message: 'Owner public key does not match the registered owner',
-            });
-        }
-
-        // Store the encryption key
-        await storeEncryptionKey(username, encryptionKey);
-        console.log(`🔐 Encryption key updated for @${username}`);
-
-        return res.json({
-            success: true,
-            username,
-            message: 'Encryption key updated successfully',
-        });
-    } catch (error) {
-        console.error('❌ Encryption key update error:', error);
-        return res.status(500).json({
-            error: 'Update failed',
-            message: error instanceof Error ? error.message : 'Unknown error',
-        });
-    }
+try {
+    return res.status(410).json({
+        error: 'Deprecated',
+        message: 'Encryption keys are now stored on-chain. Use the update_encryption_key instruction.'
+    });
+} catch (error) {
+    return res.status(500).json({ error: 'Internal Error' });
+}
 });
 
 /**
@@ -213,11 +165,12 @@ router.put('/:name/encryption-key', async (req: Request, res: Response) => {
  */
 router.post('/build-transaction', spendingLimitMiddleware, async (req: Request, res: Response) => {
     try {
-        const { username, ownerPublicKey } = req.body;
+        const { username, ownerPublicKey, encryptionKey } = req.body;
 
         console.log('🔧 Build transaction request:', {
             username,
             ownerPublicKey,
+            encryptionKey: encryptionKey ? `Provided (${encryptionKey.length} chars)` : 'Missing',
             type: typeof ownerPublicKey,
             length: ownerPublicKey?.length
         });
@@ -234,6 +187,13 @@ router.post('/build-transaction', spendingLimitMiddleware, async (req: Request, 
             return res.status(400).json({
                 error: 'Missing ownerPublicKey',
                 message: 'Owner public key is required',
+            });
+        }
+
+        if (!encryptionKey) {
+            return res.status(400).json({
+                error: 'Missing encryptionKey',
+                message: 'Encryption key is required for registration',
             });
         }
 
@@ -259,7 +219,7 @@ router.post('/build-transaction', spendingLimitMiddleware, async (req: Request, 
 
         // Build the transaction with rent pre-fund
         const { transaction, blockhash, lastValidBlockHeight } =
-            await buildRegisterUsernameTransaction(lowerUsername, ownerPublicKey);
+            await buildRegisterUsernameTransaction(lowerUsername, ownerPublicKey, encryptionKey);
 
         // Serialize transaction (base64)
         const serializedTx = transaction.serialize({
@@ -339,7 +299,7 @@ router.post('/register', spendingLimitMiddleware, async (req: Request, res: Resp
             // This is ONLY for testing - the fee payer becomes the owner
             console.log(`⚠️  Warning: Using simplified registration (fee payer = owner)`);
             const { registerUsernameOnChain } = await import('../services/solana.js');
-            signature = await registerUsernameOnChain(lowerUsername, publicKey);
+            signature = await registerUsernameOnChain(lowerUsername, publicKey, encryptionKey);
         } else {
             return res.status(400).json({
                 error: 'Missing transaction',
@@ -347,8 +307,8 @@ router.post('/register', spendingLimitMiddleware, async (req: Request, res: Resp
             });
         }
 
-        // Store encryption key
-        await storeEncryptionKey(lowerUsername, encryptionKey);
+        // Store encryption key - REDIS REMOVED
+        // await storeEncryptionKey(lowerUsername, encryptionKey);
 
         console.log(`✅ Username @${lowerUsername} registered: ${signature}`);
 
@@ -399,8 +359,8 @@ router.post('/test', spendingLimitMiddleware, async (req: Request, res: Response
         }
 
         const lowerUsername = username.toLowerCase();
-        await storeEncryptionKey(lowerUsername, encryptionKey);
-        console.log(`🧪 Test user @${lowerUsername} created`);
+        // await storeEncryptionKey(lowerUsername, encryptionKey);
+        console.log(`🧪 Test user @${lowerUsername} created (No-op for Redis removal)`);
 
         return res.json({
             success: true,
@@ -487,8 +447,8 @@ router.post('/:name/release', spendingLimitMiddleware, async (req: Request, res:
             console.log(`📝 Relaying signed release tx for @${username}...`);
             const signature = await relaySignedTransaction(signedTransaction);
 
-            // Clear encryption key
-            await deleteEncryptionKey(username);
+            // Clear encryption key - REDIS REMOVED
+            // await deleteEncryptionKey(username);
 
             return res.json({
                 success: true,

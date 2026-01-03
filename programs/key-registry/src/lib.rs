@@ -1,13 +1,17 @@
 use anchor_lang::prelude::*;
 
-declare_id!("H2p5dFRDcqFdFgDvUBDaVmH8L6zuwvokp1pbzfL8A3DN");
+declare_id!("96hG67JxhNEptr1LkdtDcrqvtWiHH3x4GibDBcdh4MYQ");
 
 #[program]
 pub mod key_registry {
     use super::*;
 
     /// Register a new username for the caller's public key
-    pub fn register_username(ctx: Context<RegisterUsername>, username: String) -> Result<()> {
+    pub fn register_username(
+        ctx: Context<RegisterUsername>, 
+        username: String,
+        encryption_key: [u8; 32],
+    ) -> Result<()> {
         // Validate username
         require!(
             username.len() >= 3 && username.len() <= 20,
@@ -24,6 +28,7 @@ pub mod key_registry {
         user_account.username = username.to_lowercase();
         user_account.created_at = Clock::get()?.unix_timestamp;
         user_account.bump = ctx.bumps.user_account;
+        user_account.encryption_key = encryption_key;
 
         msg!("Username @{} registered for {}", username, ctx.accounts.owner.key());
         
@@ -76,6 +81,22 @@ pub mod key_registry {
         );
 
         // Account will be closed automatically by Anchor's close constraint
+        Ok(())
+    }
+    pub fn update_encryption_key(
+        ctx: Context<UpdateEncryptionKey>,
+        new_encryption_key: [u8; 32],
+    ) -> Result<()> {
+        let user_account = &mut ctx.accounts.user_account;
+
+        require!(
+            user_account.owner == ctx.accounts.owner.key(),
+            KeyError::NotOwner
+        );
+
+        user_account.encryption_key = new_encryption_key;
+
+        msg!("Encryption key updated for @{}", user_account.username);
         Ok(())
     }
 }
@@ -132,6 +153,15 @@ pub struct CloseAccount<'info> {
     pub owner: Signer<'info>,
 }
 
+#[derive(Accounts)]
+pub struct UpdateEncryptionKey<'info> {
+    #[account(mut)]
+    pub user_account: Account<'info, UserAccount>,
+
+    #[account(mut)]
+    pub owner: Signer<'info>,
+}
+
 #[account]
 #[derive(InitSpace)]
 pub struct UserAccount {
@@ -147,6 +177,9 @@ pub struct UserAccount {
     
     /// PDA bump seed
     pub bump: u8,
+    
+    // NEW: X25519 encryption public key (32 bytes)
+    pub encryption_key: [u8; 32],
 }
 
 #[error_code]

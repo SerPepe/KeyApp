@@ -9,6 +9,7 @@ import messageRouter from './routes/message.js';
 import blockRouter from './routes/block.js';
 import profileRouter from './routes/profile.js';
 import adminRouter from './routes/admin.js';
+import receiptsRouter from './routes/receipts.js';
 
 const app = express();
 
@@ -18,23 +19,51 @@ app.use(express.json({ limit: '10mb' }));
 
 // Health check
 app.get('/health', async (_req, res) => {
+    const checks: Record<string, { status: string; latency?: number; details?: string }> = {};
+
+    // Solana RPC check
+    const rpcStart = Date.now();
+    try {
+        const slot = await connection.getSlot();
+        checks.solana = { status: 'ok', latency: Date.now() - rpcStart, details: `slot ${slot}` };
+    } catch (error) {
+        checks.solana = { status: 'error', details: error instanceof Error ? error.message : 'Unknown' };
+    }
+
+    // Fee payer balance
     try {
         const balance = await getFeePayerBalance();
-        const slot = await connection.getSlot();
-
-        res.json({
-            status: 'ok',
-            timestamp: new Date().toISOString(),
-            feePayerBalance: `${balance.toFixed(4)} SOL`,
-            solanaSlot: slot,
-            rateLimit: `${config.rateLimit.points} msg per ${config.rateLimit.duration}s`,
-        });
+        checks.feePayer = {
+            status: balance >= 0.01 ? 'ok' : 'warning',
+            details: `${balance.toFixed(4)} SOL`
+        };
     } catch (error) {
-        res.status(500).json({
-            status: 'error',
-            message: error instanceof Error ? error.message : 'Unknown error',
-        });
+        checks.feePayer = { status: 'error', details: error instanceof Error ? error.message : 'Unknown' };
     }
+
+    // Redis check
+    const redisStart = Date.now();
+    try {
+        const { testRedisConnection } = await import('./services/redis.js');
+        const isConnected = await testRedisConnection();
+        checks.redis = {
+            status: isConnected ? 'ok' : 'error',
+            latency: Date.now() - redisStart
+        };
+    } catch (error) {
+        checks.redis = { status: 'error', details: error instanceof Error ? error.message : 'Unknown' };
+    }
+
+    // Overall status
+    const hasError = Object.values(checks).some(c => c.status === 'error');
+    const hasWarning = Object.values(checks).some(c => c.status === 'warning');
+
+    res.status(hasError ? 503 : 200).json({
+        status: hasError ? 'error' : hasWarning ? 'warning' : 'ok',
+        timestamp: new Date().toISOString(),
+        version: config.appVersion,
+        checks
+    });
 });
 
 // API Routes
@@ -45,6 +74,13 @@ app.use('/api/message', messageRouter);
 app.use('/api/block', blockRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/admin', adminRouter);
+app.use('/api/receipt', receiptsRouter);
+import contactsRouter from './routes/contacts.js';
+app.use('/api/contacts', contactsRouter);
+import groupsRouter from './routes/groups.js';
+app.use('/api/groups', groupsRouter);
+import signalingRouter from './routes/signaling.js';
+app.use('/api/signaling', signalingRouter);
 
 // Start server
 async function start() {

@@ -219,7 +219,8 @@ const styles = StyleSheet.create({
   emptyContainer: {
     flex: 1,
     alignItems: 'center',
-    justifyContent: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 120,
     paddingHorizontal: 40,
   },
   emptyIcon: {

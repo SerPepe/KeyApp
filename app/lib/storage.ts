@@ -1,4 +1,5 @@
 import AsyncStorage from '@react-native-async-storage/async-storage';
+import nacl from 'tweetnacl';
 
 export type MessageType = 'text' | 'image';
 
@@ -28,6 +29,92 @@ export interface Chat {
 // Keys
 const CHATS_KEY = 'key_chats';
 const MESSAGES_PREFIX = 'key_messages_';
+const ENCRYPTION_KEY_CACHE_KEY = 'key_storage_encryption';
+
+// Cached encryption key (derived from signing keypair)
+let encryptionKey: Uint8Array | null = null;
+
+/**
+ * Initialize storage encryption with the user's signing keypair
+ * Must be called after authentication
+ */
+export function initStorageEncryption(signingSecretKey: Uint8Array): void {
+    // Derive a 32-byte symmetric key from the signing key
+    // Using first 32 bytes of the secret key as the seed for secretbox
+    encryptionKey = signingSecretKey.slice(0, 32);
+}
+
+/**
+ * Clear encryption key (for logout/burn)
+ */
+export function clearStorageEncryption(): void {
+    encryptionKey = null;
+}
+
+/**
+ * Encrypt data for storage
+ */
+function encryptForStorage(data: string): string {
+    if (!encryptionKey) {
+        // Fallback to unencrypted if not initialized (for backwards compatibility)
+        return data;
+    }
+
+    const nonce = nacl.randomBytes(nacl.secretbox.nonceLength);
+    const messageBytes = new TextEncoder().encode(data);
+    const encrypted = nacl.secretbox(messageBytes, nonce, encryptionKey);
+
+    // Combine nonce + encrypted
+    const combined = new Uint8Array(nonce.length + encrypted.length);
+    combined.set(nonce);
+    combined.set(encrypted, nonce.length);
+
+    // Prefix with 'enc:' to identify encrypted data
+    return 'enc:' + uint8ToBase64(combined);
+}
+
+/**
+ * Decrypt data from storage
+ */
+function decryptFromStorage(data: string): string {
+    if (!data.startsWith('enc:')) {
+        // Not encrypted, return as-is (backwards compatibility)
+        return data;
+    }
+
+    if (!encryptionKey) {
+        throw new Error('Storage encryption not initialized');
+    }
+
+    const combined = base64ToUint8(data.slice(4)); // Remove 'enc:' prefix
+    const nonce = combined.slice(0, nacl.secretbox.nonceLength);
+    const encrypted = combined.slice(nacl.secretbox.nonceLength);
+
+    const decrypted = nacl.secretbox.open(encrypted, nonce, encryptionKey);
+    if (!decrypted) {
+        throw new Error('Failed to decrypt storage data');
+    }
+
+    return new TextDecoder().decode(decrypted);
+}
+
+// Base64 helpers (inline to avoid circular dependency)
+function uint8ToBase64(bytes: Uint8Array): string {
+    let binary = '';
+    for (let i = 0; i < bytes.length; i++) {
+        binary += String.fromCharCode(bytes[i]);
+    }
+    return btoa(binary);
+}
+
+function base64ToUint8(base64: string): Uint8Array {
+    const binary = atob(base64);
+    const bytes = new Uint8Array(binary.length);
+    for (let i = 0; i < binary.length; i++) {
+        bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+}
 
 /**
  * Get all chats
@@ -35,7 +122,9 @@ const MESSAGES_PREFIX = 'key_messages_';
 export async function getChats(): Promise<Chat[]> {
     try {
         const data = await AsyncStorage.getItem(CHATS_KEY);
-        return data ? JSON.parse(data) : [];
+        if (!data) return [];
+        const decrypted = decryptFromStorage(data);
+        return JSON.parse(decrypted);
     } catch {
         return [];
     }
@@ -61,7 +150,7 @@ export async function saveChat(chat: Chat): Promise<void> {
         chats.unshift(chat);
     }
 
-    await AsyncStorage.setItem(CHATS_KEY, JSON.stringify(chats));
+    await AsyncStorage.setItem(CHATS_KEY, encryptForStorage(JSON.stringify(chats)));
 }
 
 /**
@@ -70,7 +159,9 @@ export async function saveChat(chat: Chat): Promise<void> {
 export async function getMessages(chatId: string): Promise<Message[]> {
     try {
         const data = await AsyncStorage.getItem(`${MESSAGES_PREFIX}${chatId}`);
-        return data ? JSON.parse(data) : [];
+        if (!data) return [];
+        const decrypted = decryptFromStorage(data);
+        return JSON.parse(decrypted);
     } catch {
         return [];
     }
@@ -84,7 +175,7 @@ export async function saveMessage(message: Message): Promise<void> {
     messages.push(message);
     await AsyncStorage.setItem(
         `${MESSAGES_PREFIX}${message.chatId}`,
-        JSON.stringify(messages)
+        encryptForStorage(JSON.stringify(messages))
     );
 
     // Update chat's last message
@@ -94,7 +185,7 @@ export async function saveMessage(message: Message): Promise<void> {
         // For images, show a placeholder in last message preview
         chats[chatIndex].lastMessage = message.type === 'image' ? '📷 Photo' : message.content;
         chats[chatIndex].lastMessageTime = message.timestamp;
-        await AsyncStorage.setItem(CHATS_KEY, JSON.stringify(chats));
+        await AsyncStorage.setItem(CHATS_KEY, encryptForStorage(JSON.stringify(chats)));
     }
 }
 
@@ -117,7 +208,7 @@ export async function updateMessageStatus(
         }
         await AsyncStorage.setItem(
             `${MESSAGES_PREFIX}${chatId}`,
-            JSON.stringify(messages)
+            encryptForStorage(JSON.stringify(messages))
         );
     }
 }
@@ -128,7 +219,7 @@ export async function updateMessageStatus(
 export async function deleteMessage(chatId: string, messageId: string): Promise<void> {
     const messages = await getMessages(chatId);
     const filtered = messages.filter((m) => m.id !== messageId);
-    await AsyncStorage.setItem(`${MESSAGES_PREFIX}${chatId}`, JSON.stringify(filtered));
+    await AsyncStorage.setItem(`${MESSAGES_PREFIX}${chatId}`, encryptForStorage(JSON.stringify(filtered)));
 
     // Update chat's last message if the deleted message was the latest
     if (messages.length > 0 && filtered.length > 0) {
@@ -138,7 +229,7 @@ export async function deleteMessage(chatId: string, messageId: string): Promise<
         if (chatIndex >= 0) {
             chats[chatIndex].lastMessage = lastMsg.type === 'image' ? '📷 Photo' : lastMsg.content;
             chats[chatIndex].lastMessageTime = lastMsg.timestamp;
-            await AsyncStorage.setItem(CHATS_KEY, JSON.stringify(chats));
+            await AsyncStorage.setItem(CHATS_KEY, encryptForStorage(JSON.stringify(chats)));
         }
     }
 }

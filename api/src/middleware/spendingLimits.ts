@@ -14,48 +14,50 @@ export async function spendingLimitMiddleware(
     res: Response,
     next: NextFunction
 ): Promise<void> {
-    // 1. Identify User
-    // Use public key from body if available, otherwise fallback to IP (less secure but better than nothing)
-    const userIdentifier = req.body?.senderPublicKey || req.body?.ownerPublicKey || req.body?.publicKey || req.ip || 'unknown';
+    // Require public key - no IP fallback for security
+    const userIdentifier = req.body?.senderPublicKey || req.body?.ownerPublicKey || req.body?.publicKey || req.body?.senderPubkey;
 
-    // 2. Estimate Cost
+    if (!userIdentifier) {
+        res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Valid public key required for spending limits',
+        });
+        return;
+    }
+
     // Standard transaction is ~5000 lamports (0.000005 SOL)
-    // We'll use a conservative estimate for tracking
     const ESTIMATED_TX_COST_SOL = 0.000005;
 
     try {
         const today = new Date().toISOString().split('T')[0]; // YYYY-MM-DD
         const key = `${SPENDING_KEY_PREFIX}${today}:${userIdentifier}`;
 
-        // Get current usage
-        const currentUsageStr = await redis.get<string>(key);
-        const currentUsage = currentUsageStr ? parseFloat(currentUsageStr) : 0;
+        // Use atomic INCRBYFLOAT for thread safety
+        const newUsageStr = await redis.incrbyfloat(key, ESTIMATED_TX_COST_SOL);
+        const newUsage = parseFloat(newUsageStr as unknown as string);
 
-        // Check if limit exceeded
-        if (currentUsage >= config.spendingLimits.maxDailySolPerUser) {
-            console.warn(`🛑 User ${userIdentifier} exceeded daily spending limit: ${currentUsage.toFixed(6)} SOL`);
+        // Set expiry on first increment
+        await redis.expire(key, SECONDS_IN_DAY);
+
+        // Check if limit exceeded (after increment for accuracy)
+        if (newUsage > config.spendingLimits.maxDailySolPerUser) {
+            console.warn(`🛑 User ${userIdentifier} exceeded daily spending limit: ${newUsage.toFixed(6)} SOL`);
             res.status(429).json({
                 error: 'Daily limit exceeded',
                 message: 'You have reached your daily transaction limit. Please try again tomorrow.',
                 limit: `${config.spendingLimits.maxDailySolPerUser} SOL`,
-                usage: `${currentUsage.toFixed(6)} SOL`
+                usage: `${newUsage.toFixed(6)} SOL`
             });
             return;
         }
 
-        // Increment usage (atomic incrbyfloat not supported by all Redis, so we calculate and set)
-        // Upstash supports incrbyfloat but let's be safe with get/set for now or use if available
-        // We'll just optimistic update for simplicity in this middleware
-        const newUsage = currentUsage + ESTIMATED_TX_COST_SOL;
-
-        // Save with expiry (24h)
-        await redis.set(key, newUsage.toString(), { ex: SECONDS_IN_DAY });
-
         next();
     } catch (error) {
         console.error('Spending limit check failed:', error);
-        // Fail open if Redis is down? Or fail closed?
-        // Let's fail open to not break service, but log error
-        next();
+        // Fail closed - reject request if Redis is unavailable
+        res.status(503).json({
+            error: 'Service unavailable',
+            message: 'Spending limit service temporarily unavailable',
+        });
     }
 }

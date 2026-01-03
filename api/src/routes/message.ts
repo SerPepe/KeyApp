@@ -99,8 +99,12 @@ router.post('/send', rateLimitMiddleware, spendingLimitMiddleware, async (req: R
                 });
             }
         } catch (blockError) {
-            console.warn('Block check failed, proceeding anyway:', blockError);
-            // Continue if Redis is down - fail open for messaging
+            console.error('Block check failed - rejecting for security:', blockError);
+            // Fail closed - reject message if block check fails
+            return res.status(503).json({
+                error: 'Service unavailable',
+                message: 'Unable to verify block status. Please try again.',
+            });
         }
 
         // Check memo size

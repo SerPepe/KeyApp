@@ -1,75 +1,269 @@
 import { Platform } from 'react-native';
-import * as SecureStore from 'expo-secure-store';
+import * as Keychain from 'react-native-keychain';
 import { generateKeypair, uint8ToBase64, base64ToUint8, type KeyPair } from './crypto';
 
-const PRIVATE_KEY_STORAGE_KEY = 'key_private_key';
-const PUBLIC_KEY_STORAGE_KEY = 'key_public_key';
-const USERNAME_STORAGE_KEY = 'key_username';
+const SERVICE_NAME = 'com.keyapp.identity';
+const USERNAME_SERVICE = 'com.keyapp.username';
 
-// Web fallback using localStorage (less secure, but works)
-const webStorage = {
+// Database name for IndexedDB
+const DB_NAME = 'keyapp_secure';
+const STORE_NAME = 'encrypted_keys';
+const DB_VERSION = 1;
+
+// Cached encryption key derived from user password (or device fingerprint)
+let webEncryptionKey: CryptoKey | null = null;
+
+/**
+ * Initialize the web encryption key from a password
+ * Should be called with a user-provided password or device fingerprint
+ */
+export async function initWebEncryption(password: string): Promise<void> {
+    if (typeof window === 'undefined' || !window.crypto?.subtle) return;
+
+    const encoder = new TextEncoder();
+    const keyMaterial = await crypto.subtle.importKey(
+        'raw',
+        encoder.encode(password),
+        'PBKDF2',
+        false,
+        ['deriveKey']
+    );
+
+    webEncryptionKey = await crypto.subtle.deriveKey(
+        {
+            name: 'PBKDF2',
+            salt: encoder.encode('keyapp-salt-v1'),
+            iterations: 100000,
+            hash: 'SHA-256',
+        },
+        keyMaterial,
+        { name: 'AES-GCM', length: 256 },
+        false,
+        ['encrypt', 'decrypt']
+    );
+}
+
+/**
+ * Open IndexedDB database
+ */
+function openDatabase(): Promise<IDBDatabase> {
+    return new Promise((resolve, reject) => {
+        const request = indexedDB.open(DB_NAME, DB_VERSION);
+        request.onerror = () => reject(request.error);
+        request.onsuccess = () => resolve(request.result);
+        request.onupgradeneeded = (event) => {
+            const db = (event.target as IDBOpenDBRequest).result;
+            if (!db.objectStoreNames.contains(STORE_NAME)) {
+                db.createObjectStore(STORE_NAME);
+            }
+        };
+    });
+}
+
+/**
+ * Encrypt data using AES-GCM
+ */
+async function encryptData(data: string): Promise<ArrayBuffer> {
+    if (!webEncryptionKey) {
+        throw new Error('Web encryption not initialized');
+    }
+
+    const encoder = new TextEncoder();
+    const iv = crypto.getRandomValues(new Uint8Array(12));
+    const encrypted = await crypto.subtle.encrypt(
+        { name: 'AES-GCM', iv },
+        webEncryptionKey,
+        encoder.encode(data)
+    );
+
+    // Combine IV + encrypted data
+    const combined = new Uint8Array(iv.length + encrypted.byteLength);
+    combined.set(iv);
+    combined.set(new Uint8Array(encrypted), iv.length);
+    return combined.buffer;
+}
+
+/**
+ * Decrypt data using AES-GCM
+ */
+async function decryptData(data: ArrayBuffer): Promise<string> {
+    if (!webEncryptionKey) {
+        throw new Error('Web encryption not initialized');
+    }
+
+    const combined = new Uint8Array(data);
+    const iv = combined.slice(0, 12);
+    const encrypted = combined.slice(12);
+
+    const decrypted = await crypto.subtle.decrypt(
+        { name: 'AES-GCM', iv },
+        webEncryptionKey,
+        encrypted
+    );
+
+    return new TextDecoder().decode(decrypted);
+}
+
+// Encrypted Web storage using IndexedDB
+const encryptedWebStorage = {
     async getItemAsync(key: string): Promise<string | null> {
-        if (typeof window !== 'undefined' && window.localStorage) {
-            return window.localStorage.getItem(key);
+        if (typeof window === 'undefined') return null;
+
+        try {
+            // Fall back to localStorage if encryption not initialized
+            if (!webEncryptionKey) {
+                return window.localStorage?.getItem(key) || null;
+            }
+
+            const db = await openDatabase();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readonly');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.get(key);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = async () => {
+                    if (!request.result) {
+                        resolve(null);
+                        return;
+                    }
+                    try {
+                        const decrypted = await decryptData(request.result);
+                        resolve(decrypted);
+                    } catch {
+                        resolve(null);
+                    }
+                };
+            });
+        } catch {
+            return window.localStorage?.getItem(key) || null;
         }
-        return null;
     },
+
     async setItemAsync(key: string, value: string): Promise<void> {
-        if (typeof window !== 'undefined' && window.localStorage) {
-            window.localStorage.setItem(key, value);
+        if (typeof window === 'undefined') return;
+
+        try {
+            // Fall back to localStorage if encryption not initialized
+            if (!webEncryptionKey) {
+                window.localStorage?.setItem(key, value);
+                return;
+            }
+
+            const encrypted = await encryptData(value);
+            const db = await openDatabase();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.put(encrypted, key);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve();
+            });
+        } catch {
+            window.localStorage?.setItem(key, value);
         }
     },
+
     async deleteItemAsync(key: string): Promise<void> {
-        if (typeof window !== 'undefined' && window.localStorage) {
-            window.localStorage.removeItem(key);
+        if (typeof window === 'undefined') return;
+
+        try {
+            window.localStorage?.removeItem(key);
+
+            if (!webEncryptionKey) return;
+
+            const db = await openDatabase();
+            return new Promise((resolve, reject) => {
+                const tx = db.transaction(STORE_NAME, 'readwrite');
+                const store = tx.objectStore(STORE_NAME);
+                const request = store.delete(key);
+                request.onerror = () => reject(request.error);
+                request.onsuccess = () => resolve();
+            });
+        } catch {
+            // Ignore errors
         }
     },
 };
 
-// Use SecureStore on native, localStorage on web
-const storage = Platform.OS === 'web' ? webStorage : SecureStore;
+// Use the encrypted storage for web
+const webStorage = encryptedWebStorage;
 
 /**
- * Store a keypair securely in the device keychain
+ * Store a keypair securely in the device keychain with iCloud sync
  */
 export async function storeKeypair(keypair: KeyPair): Promise<void> {
     if (Platform.OS === 'web') {
-        await storage.setItemAsync(PRIVATE_KEY_STORAGE_KEY, uint8ToBase64(keypair.secretKey));
-        await storage.setItemAsync(PUBLIC_KEY_STORAGE_KEY, uint8ToBase64(keypair.publicKey));
+        // Web: keep localStorage for now (security warning shown in UI)
+        await webStorage.setItemAsync('key_private_key', uint8ToBase64(keypair.secretKey));
+        await webStorage.setItemAsync('key_public_key', uint8ToBase64(keypair.publicKey));
     } else {
-        // Use AFTER_FIRST_UNLOCK to persist across app reinstalls/updates
-        // Keys will survive app deletion and reinstall, and can be restored from iCloud backup
-        await SecureStore.setItemAsync(
-            PRIVATE_KEY_STORAGE_KEY,
-            uint8ToBase64(keypair.secretKey),
-            { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK }
-        );
-        await SecureStore.setItemAsync(
-            PUBLIC_KEY_STORAGE_KEY,
-            uint8ToBase64(keypair.publicKey),
-            { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK }
-        );
+        // iOS/Android: use react-native-keychain with iCloud sync
+        try {
+            await Keychain.setGenericPassword(
+                'keypair',
+                JSON.stringify({
+                    secretKey: uint8ToBase64(keypair.secretKey),
+                    publicKey: uint8ToBase64(keypair.publicKey),
+                }),
+                {
+                    service: SERVICE_NAME,
+                    accessible: Keychain.ACCESSIBLE.AFTER_FIRST_UNLOCK,
+                    // Enable iCloud Keychain sync on iOS
+                    synchronizable: true,
+                }
+            );
+        } catch (error) {
+            console.warn('Keychain sync failed, falling back to local keychain:', error);
+            // Fallback to local keychain (no cloud sync)
+            await Keychain.setGenericPassword(
+                'keypair',
+                JSON.stringify({
+                    secretKey: uint8ToBase64(keypair.secretKey),
+                    publicKey: uint8ToBase64(keypair.publicKey),
+                }),
+                {
+                    service: SERVICE_NAME,
+                    accessible: Keychain.ACCESSIBLE.AFTER_FIRST_UNLOCK,
+                    synchronizable: false,
+                }
+            );
+        }
     }
 }
 
 /**
- * Retrieve the stored keypair from device keychain
+ * Retrieve the stored keypair from device keychain (synced via iCloud)
  */
 export async function getStoredKeypair(): Promise<KeyPair | null> {
     try {
-        const secretKeyBase64 = await storage.getItemAsync(PRIVATE_KEY_STORAGE_KEY);
-        const publicKeyBase64 = await storage.getItemAsync(PUBLIC_KEY_STORAGE_KEY);
+        if (Platform.OS === 'web') {
+            const secretKeyBase64 = await webStorage.getItemAsync('key_private_key');
+            const publicKeyBase64 = await webStorage.getItemAsync('key_public_key');
 
-        if (!secretKeyBase64 || !publicKeyBase64) {
+            if (!secretKeyBase64 || !publicKeyBase64) {
+                return null;
+            }
+
+            return {
+                secretKey: base64ToUint8(secretKeyBase64),
+                publicKey: base64ToUint8(publicKeyBase64),
+            };
+        }
+
+        // Native: use react-native-keychain
+        const credentials = await Keychain.getGenericPassword({ service: SERVICE_NAME });
+
+        if (!credentials) {
             return null;
         }
 
+        const parsed = JSON.parse(credentials.password);
         return {
-            secretKey: base64ToUint8(secretKeyBase64),
-            publicKey: base64ToUint8(publicKeyBase64),
+            secretKey: base64ToUint8(parsed.secretKey),
+            publicKey: base64ToUint8(parsed.publicKey),
         };
     } catch (error) {
-        console.warn('Keychain access failed (normal on simulator):', error);
+        console.warn('Keychain access failed:', error);
         return null;
     }
 }
@@ -93,36 +287,65 @@ export async function createIdentity(): Promise<KeyPair> {
 
 /**
  * Delete the stored identity (for "burn" functionality)
+ * This also removes from iCloud Keychain on iOS
  */
 export async function deleteIdentity(): Promise<void> {
-    await storage.deleteItemAsync(PRIVATE_KEY_STORAGE_KEY);
-    await storage.deleteItemAsync(PUBLIC_KEY_STORAGE_KEY);
-    await storage.deleteItemAsync(USERNAME_STORAGE_KEY);
-}
-
-/**
- * Store the registered username
- */
-export async function storeUsername(username: string): Promise<void> {
     if (Platform.OS === 'web') {
-        await storage.setItemAsync(USERNAME_STORAGE_KEY, username);
+        await webStorage.deleteItemAsync('key_private_key');
+        await webStorage.deleteItemAsync('key_public_key');
+        await webStorage.deleteItemAsync('key_username');
     } else {
-        await SecureStore.setItemAsync(
-            USERNAME_STORAGE_KEY,
-            username,
-            { keychainAccessible: SecureStore.AFTER_FIRST_UNLOCK }
-        );
+        // This removes from iCloud Keychain too (synchronizable: true)
+        await Keychain.resetGenericPassword({ service: SERVICE_NAME });
+        await Keychain.resetGenericPassword({ service: USERNAME_SERVICE });
     }
 }
 
 /**
- * Get the stored username
+ * Store the registered username with iCloud sync
+ */
+export async function storeUsername(username: string): Promise<void> {
+    if (Platform.OS === 'web') {
+        await webStorage.setItemAsync('key_username', username);
+    } else {
+        try {
+            await Keychain.setGenericPassword(
+                'username',
+                username,
+                {
+                    service: USERNAME_SERVICE,
+                    accessible: Keychain.ACCESSIBLE.AFTER_FIRST_UNLOCK,
+                    synchronizable: true,
+                }
+            );
+        } catch (error) {
+            console.warn('Keychain username sync failed, falling back to local:', error);
+            await Keychain.setGenericPassword(
+                'username',
+                username,
+                {
+                    service: USERNAME_SERVICE,
+                    accessible: Keychain.ACCESSIBLE.AFTER_FIRST_UNLOCK,
+                    synchronizable: false,
+                }
+            );
+        }
+    }
+}
+
+/**
+ * Get the stored username (synced via iCloud)
  */
 export async function getStoredUsername(): Promise<string | null> {
     try {
-        return await storage.getItemAsync(USERNAME_STORAGE_KEY);
+        if (Platform.OS === 'web') {
+            return await webStorage.getItemAsync('key_username');
+        }
+
+        const credentials = await Keychain.getGenericPassword({ service: USERNAME_SERVICE });
+        return credentials ? credentials.password : null;
     } catch (error) {
-        console.warn('Username fetch failed (normal on simulator):', error);
+        console.warn('Username fetch failed:', error);
         return null;
     }
 }

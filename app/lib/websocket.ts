@@ -5,7 +5,19 @@ import { saveChat, saveMessage, generateMessageId, isSignatureProcessed, addProc
 import * as Notifications from 'expo-notifications';
 
 const RPC_URL = process.env.EXPO_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com';
-const connection = new Connection(RPC_URL, 'confirmed');
+let connection: Connection | null = null;
+
+function getConnection(): Connection {
+    if (!connection) {
+        try {
+            connection = new Connection(RPC_URL, 'confirmed');
+        } catch (error) {
+            console.error('Failed to initialize Solana connection:', error);
+            throw error;
+        }
+    }
+    return connection;
+}
 
 type MessageCallback = (message: Message) => void;
 
@@ -33,50 +45,54 @@ export async function startMessageListener(): Promise<void> {
     console.log('🔌 Starting WebSocket listener for:', publicKey.toBase58().slice(0, 8) + '...');
 
     // Subscribe to account changes (transactions to our address)
-    subscriptionId = connection.onLogs(
-        publicKey,
-        async (logs, ctx) => {
-            const { signature } = logs;
+    try {
+        subscriptionId = getConnection().onLogs(
+            publicKey,
+            async (logs, ctx) => {
+                const { signature } = logs;
 
-            try {
-                // Fetch full transaction details
-                const tx = await connection.getParsedTransaction(signature, {
-                    maxSupportedTransactionVersion: 0,
-                });
+                try {
+                    // Fetch full transaction details
+                    const tx = await getConnection().getParsedTransaction(signature, {
+                        maxSupportedTransactionVersion: 0,
+                    });
 
-                if (!tx) return;
+                    if (!tx) return;
 
-                // Check if already processed to prevent duplicates
-                const txSignature = tx.transaction.signatures[0];
-                if (await isSignatureProcessed(txSignature)) {
-                    console.log('↩️ Message already processed, skipping:', txSignature.slice(0, 8));
-                    return;
+                    // Check if already processed to prevent duplicates
+                    const txSignature = tx.transaction.signatures[0];
+                    if (await isSignatureProcessed(txSignature)) {
+                        console.log('↩️ Message already processed, skipping:', txSignature.slice(0, 8));
+                        return;
+                    }
+
+                    // Look for memo instruction
+                    const memoData = extractMemoFromTransaction(tx);
+                    if (!memoData) return;
+
+                    // Try to decrypt the message
+                    const decryptedMessage = await tryDecryptMessage(memoData, tx);
+                    if (decryptedMessage) {
+                        console.log('📩 New message received!');
+
+                        // Mark as processed immediately to prevent duplicates
+                        await addProcessedSignature(txSignature);
+
+                        // Notify callbacks
+                        messageCallbacks.forEach((cb) => cb(decryptedMessage));
+
+                        // Show push notification
+                        await showMessageNotification(decryptedMessage);
+                    }
+                } catch (error) {
+                    console.error('Error processing transaction:', error);
                 }
-
-                // Look for memo instruction
-                const memoData = extractMemoFromTransaction(tx);
-                if (!memoData) return;
-
-                // Try to decrypt the message
-                const decryptedMessage = await tryDecryptMessage(memoData, tx);
-                if (decryptedMessage) {
-                    console.log('📩 New message received!');
-
-                    // Mark as processed immediately to prevent duplicates
-                    await addProcessedSignature(txSignature);
-
-                    // Notify callbacks
-                    messageCallbacks.forEach((cb) => cb(decryptedMessage));
-
-                    // Show push notification
-                    await showMessageNotification(decryptedMessage);
-                }
-            } catch (error) {
-                console.error('Error processing transaction:', error);
-            }
-        },
-        'confirmed'
-    );
+            },
+            'confirmed'
+        );
+    } catch (error) {
+        console.error('Failed to setup log listener:', error);
+    }
 
     console.log('✅ WebSocket listener started, subscription ID:', subscriptionId);
 }
@@ -86,7 +102,7 @@ export async function startMessageListener(): Promise<void> {
  */
 export async function stopMessageListener(): Promise<void> {
     if (subscriptionId !== null) {
-        await connection.removeOnLogsListener(subscriptionId);
+        await getConnection().removeOnLogsListener(subscriptionId);
         subscriptionId = null;
         console.log('🔌 WebSocket listener stopped');
     }

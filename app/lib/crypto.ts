@@ -1,6 +1,4 @@
-// MUST be at the very top before any other imports
-import 'react-native-get-random-values';
-
+// Polyfill is loaded at app entry point (index.js)
 import nacl from 'tweetnacl';
 import bs58 from 'bs58';
 import { Transaction, Keypair } from '@solana/web3.js';

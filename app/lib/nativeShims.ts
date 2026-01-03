@@ -1,3 +1,6 @@
+// MUST BE FIRST - Polyfill crypto.getRandomValues for tweetnacl
+import 'react-native-get-random-values';
+
 import { Platform } from 'react-native';
 
 // Some dependencies still reach for deprecated React Native exports like
@@ -18,7 +21,7 @@ import { Platform } from 'react-native';
     if (clipboardDescriptor?.get) {
       const clipboardStub = {
         getString: async () => '',
-        setString: () => {},
+        setString: () => { },
         hasString: async () => false,
       };
 
@@ -49,17 +52,17 @@ import { Platform } from 'react-native';
             badge: false,
             sound: false,
           }),
-          abandonPermissions: () => {},
-          addEventListener: () => {},
-          removeEventListener: () => {},
-          removeAllDeliveredNotifications: () => {},
-          setApplicationIconBadgeNumber: () => {},
+          abandonPermissions: () => { },
+          addEventListener: () => { },
+          removeEventListener: () => { },
+          removeAllDeliveredNotifications: () => { },
+          setApplicationIconBadgeNumber: () => { },
           getApplicationIconBadgeNumber: async () => 0,
           getInitialNotification: async () => null,
-          presentLocalNotification: () => {},
-          scheduleLocalNotification: () => {},
-          cancelAllLocalNotifications: () => {},
-          cancelLocalNotifications: () => {},
+          presentLocalNotification: () => { },
+          scheduleLocalNotification: () => { },
+          cancelAllLocalNotifications: () => { },
+          cancelLocalNotifications: () => { },
         };
       }
 

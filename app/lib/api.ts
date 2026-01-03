@@ -95,7 +95,8 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
  */
 export async function buildUsernameTransaction(
     username: string,
-    ownerPublicKey: string
+    ownerPublicKey: string,
+    encryptionKey: string
 ): Promise<BuildTransactionResponse> {
     const response = await fetch(`${API_BASE_URL}/api/username/build-transaction`, {
         method: 'POST',
@@ -103,6 +104,7 @@ export async function buildUsernameTransaction(
         body: JSON.stringify({
             username,
             ownerPublicKey,
+            encryptionKey,
         }),
     });
 

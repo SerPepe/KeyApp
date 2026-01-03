@@ -66,34 +66,7 @@ export async function testRedisConnection(): Promise<boolean> {
     }
 }
 
-/**
- * Key prefix for encryption keys (public; safe to persist)
- */
-const ENCRYPTION_KEY_PREFIX = 'encryption:';
 
-/**
- * Store a user's encryption key (public X25519 key)
- */
-export async function storeEncryptionKey(username: string, encryptionKey: string): Promise<void> {
-    const key = `${ENCRYPTION_KEY_PREFIX}${username.toLowerCase()}`;
-    await redis.set(key, encryptionKey);
-}
-
-/**
- * Retrieve a user's encryption key
- */
-export async function getEncryptionKey(username: string): Promise<string | null> {
-    const key = `${ENCRYPTION_KEY_PREFIX}${username.toLowerCase()}`;
-    return await redis.get<string>(key);
-}
-
-/**
- * Delete a user's encryption key (e.g., when username is released)
- */
-export async function deleteEncryptionKey(username: string): Promise<void> {
-    const key = `${ENCRYPTION_KEY_PREFIX}${username.toLowerCase()}`;
-    await redis.del(key);
-}
 
 /**
  * Key prefix for message blobs

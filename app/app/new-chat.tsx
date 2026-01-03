@@ -18,6 +18,8 @@ import { getPublicKeyByUsername } from '@/lib/api';
 import { saveChat } from '@/lib/storage';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const IS_LARGE_SCREEN = SCREEN_WIDTH > 600;
+const MAX_CONTENT_WIDTH = 400;
 
 export default function NewChatScreen() {
     const router = useRouter();
@@ -159,6 +161,9 @@ const styles = StyleSheet.create({
         flex: 1,
         paddingHorizontal: 24,
         paddingTop: 100, // Account for transparent header
+        width: '100%',
+        maxWidth: IS_LARGE_SCREEN ? MAX_CONTENT_WIDTH : undefined,
+        alignSelf: IS_LARGE_SCREEN ? 'center' : undefined,
     },
     backgroundArt: {
         position: 'absolute',

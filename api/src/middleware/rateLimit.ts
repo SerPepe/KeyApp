@@ -13,13 +13,30 @@ export async function rateLimitMiddleware(
     res: Response,
     next: NextFunction
 ): Promise<void> {
-    // Use public key from body as identifier (support both field names), fallback to IP
-    const identifier = req.body?.senderPubkey || req.body?.senderPublicKey || req.ip || 'unknown';
+    // Require public key - no IP fallback for security
+    const identifier = req.body?.senderPubkey || req.body?.senderPublicKey;
+
+    if (!identifier) {
+        res.status(401).json({
+            error: 'Unauthorized',
+            message: 'Valid public key required for rate limiting',
+        });
+        return;
+    }
 
     try {
         await rateLimiter.consume(identifier);
         next();
     } catch (rejRes) {
+        // Rate limit exceeded OR rate limiter error - fail closed
+        if (rejRes instanceof Error) {
+            console.error('Rate limiter error:', rejRes);
+            res.status(503).json({
+                error: 'Service unavailable',
+                message: 'Rate limiting service temporarily unavailable',
+            });
+            return;
+        }
         res.status(429).json({
             error: 'Too many requests',
             message: 'You can send 1 message every 2 seconds',

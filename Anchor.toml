@@ -3,10 +3,10 @@ seeds = false
 skip-lint = false
 
 [programs.localnet]
-key_registry = "H2p5dFRDcqFdFgDvUBDaVmH8L6zuwvokp1pbzfL8A3DN"
+key_registry = "96hG67JxhNEptr1LkdtDcrqvtWiHH3x4GibDBcdh4MYQ"
 
 [programs.devnet]
-key_registry = "H2p5dFRDcqFdFgDvUBDaVmH8L6zuwvokp1pbzfL8A3DN"
+key_registry = "96hG67JxhNEptr1LkdtDcrqvtWiHH3x4GibDBcdh4MYQ"
 
 [registry]
 url = "https://api.apr.dev"
