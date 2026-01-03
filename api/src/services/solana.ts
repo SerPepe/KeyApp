@@ -131,12 +131,13 @@ export async function getUserAccount(username: string): Promise<{
 /**
  * Lookup a username by owner public key (for account recovery)
  */
-owner: string;
-username: string;
-createdAt: number;
-bump: number;
-encryptionKey: string;
-} | null > {
+export async function findUserByOwner(ownerPubkey: string): Promise<{
+    owner: string;
+    username: string;
+    createdAt: number;
+    bump: number;
+    encryptionKey: string;
+} | null> {
     try {
         const owner = new PublicKey(ownerPubkey);
         const accounts = await connection.getProgramAccounts(PROGRAM_ID, {
@@ -150,7 +151,7 @@ encryptionKey: string;
             ],
         });
 
-        if(accounts.length === 0) return null;
+        if (accounts.length === 0) return null;
 
         const data = accounts[0].account.data as Buffer;
 
@@ -178,7 +179,7 @@ encryptionKey: string;
             bump,
             encryptionKey,
         };
-    } catch(error) {
+    } catch (error) {
         console.error('Error finding user by owner:', error);
         return null;
     }
