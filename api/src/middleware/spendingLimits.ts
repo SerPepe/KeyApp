@@ -14,13 +14,13 @@ export async function spendingLimitMiddleware(
     res: Response,
     next: NextFunction
 ): Promise<void> {
-    // Require public key - no IP fallback for security
-    const userIdentifier = req.body?.senderPublicKey || req.body?.ownerPublicKey || req.body?.publicKey || req.body?.senderPubkey;
+    // Require public key or username - no IP fallback for security
+    const userIdentifier = req.body?.senderPublicKey || req.body?.ownerPublicKey || req.body?.publicKey || req.body?.senderPubkey || req.body?.username;
 
     if (!userIdentifier) {
         res.status(401).json({
             error: 'Unauthorized',
-            message: 'Valid public key required for spending limits',
+            message: 'Valid public key or username required for spending limits',
         });
         return;
     }
