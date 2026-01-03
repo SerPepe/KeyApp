@@ -4,7 +4,8 @@ import { getStoredKeypair, getStoredUsername } from './keychain';
 import { saveChat, saveMessage, generateMessageId, isSignatureProcessed, addProcessedSignature, type Message } from './storage';
 import * as Notifications from 'expo-notifications';
 
-const RPC_URL = process.env.EXPO_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com';
+// Fallback to Helius devnet RPC to prevent crashes when env var is not set
+const RPC_URL = process.env.EXPO_PUBLIC_SOLANA_RPC_URL || 'https://devnet.helius-rpc.com/?api-key=cd3296e0-204f-4057-bf8a-39f00bb69f8f';
 let connection: Connection | null = null;
 
 function getConnection(): Connection {

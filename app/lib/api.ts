@@ -1,8 +1,6 @@
-const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL;
-
-if (!API_BASE_URL) {
-    throw new Error('EXPO_PUBLIC_API_URL is not set. Configure it in your environment before running the app.');
-}
+// Fallback to production URL to prevent crashes when env var is not set
+// (e.g., cached bundles from development builds in TestFlight)
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://keyapp-production.up.railway.app';
 
 /**
  * API Response types
