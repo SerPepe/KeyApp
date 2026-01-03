@@ -1,5 +1,5 @@
 import { Router, Request, Response } from 'express';
-import { redis, deleteEncryptionKey, deleteAvatar } from '../services/redis.js';
+import { redis, deleteAvatar } from '../services/redis.js';
 
 const router = Router();
 

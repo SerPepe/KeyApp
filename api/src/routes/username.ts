@@ -14,7 +14,7 @@ import {
     getFeePayerBalance
 } from '../services/solana.js';
 import { spendingLimitMiddleware } from '../middleware/spendingLimits.js';
-import { spendingLimitMiddleware } from '../middleware/spendingLimits.js';
+
 // Removed: getEncryptionKey, storeEncryptionKey from redis.js
 // import { getEncryptionKey, storeEncryptionKey, deleteEncryptionKey } from '../services/redis.js';
 
