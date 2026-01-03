@@ -68,17 +68,18 @@ export async function checkUsernameAvailable(username: string): Promise<boolean>
 /**
  * Get user account data from onchain (raw account parsing)
  */
-owner: string;
-username: string;
-createdAt: number;
-bump: number;
-encryptionKey: string; // Base64 encoded
-} | null > {
+export async function getUserAccount(username: string): Promise<{
+    owner: string;
+    username: string;
+    createdAt: number;
+    bump: number;
+    encryptionKey: string; // Base64 encoded
+} | null> {
     try {
         const [pda] = getUsernamePDA(username);
         const accountInfo = await connection.getAccountInfo(pda);
 
-        if(!accountInfo) {
+        if (!accountInfo) {
             return null;
         }
 
@@ -121,7 +122,7 @@ encryptionKey: string; // Base64 encoded
             bump,
             encryptionKey,
         };
-    } catch(error) {
+    } catch (error) {
         console.error('Error fetching user account:', error);
         return null;
     }

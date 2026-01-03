@@ -148,14 +148,15 @@ import { verifySignature } from '../middleware/auth.js';
  * Update encryption key for an existing user
  * This is needed after server restart when in-memory store is cleared
  */
-try {
-    return res.status(410).json({
-        error: 'Deprecated',
-        message: 'Encryption keys are now stored on-chain. Use the update_encryption_key instruction.'
-    });
-} catch (error) {
-    return res.status(500).json({ error: 'Internal Error' });
-}
+router.put('/:name/encryption-key', async (req: Request, res: Response) => {
+    try {
+        return res.status(410).json({
+            error: 'Deprecated',
+            message: 'Encryption keys are now stored on-chain. Use the update_encryption_key instruction.'
+        });
+    } catch (error) {
+        return res.status(500).json({ error: 'Internal Error' });
+    }
 });
 
 /**

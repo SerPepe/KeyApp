@@ -155,7 +155,7 @@ function RootLayoutNav() {
 
         // Consider the user onboarded only if both key and username exist
         setHasIdentity(!!keypair && !!resolvedUsername);
-      } // Close if (keypair && resolvedUsername)
+      }
     } catch (error) {
       console.error('Auth check failed:', error);
       setHasIdentity(false);
