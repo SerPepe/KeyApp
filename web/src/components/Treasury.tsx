@@ -6,7 +6,7 @@ import { useState } from "react"
 
 export default function Treasury() {
     const [copied, setCopied] = useState(false)
-    const address = "KeyFoundation7xK9...sol" // Placeholder
+    const address = "6V1AyUweJhZTNqZFHMFZKFxgDEBZhQSTqGjTkRJ3d2jQ"
 
     const handleCopy = () => {
         navigator.clipboard.writeText(address)
@@ -55,9 +55,9 @@ export default function Treasury() {
                         viewport={{ once: true }}
                         transition={{ duration: 0.8, delay: 0.5 }}
                     >
-                        {/* Address hidden until mainnet deployment */}
+
                         <div className="address-bar" style={{ opacity: 0.5, cursor: 'not-allowed' }}>
-                            <span className="mono">Treasury Opening Soon</span>
+                            <span className="mono">6V1AyUweJhZTNqZFHMFZKFxgDEBZhQSTqGjTkRJ3d2jQ</span>
                         </div>
                     </motion.div>
 
