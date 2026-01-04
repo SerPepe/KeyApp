@@ -147,7 +147,9 @@ export default function SettingsScreen() {
     };
 
     const handleBurnIdentity = () => {
-        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        if (Platform.OS !== 'web') {
+            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Warning);
+        }
         Alert.alert(
             'Burn Identity',
             'This will permanently delete your keys and all messages. Your username will be released for others to claim.',
@@ -186,7 +188,9 @@ export default function SettingsScreen() {
 
                         await deleteIdentity();
                         await clearAllData();
-                        Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        if (Platform.OS !== 'web') {
+                            Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
+                        }
                         router.replace('/onboarding');
                     },
                 },
