@@ -104,89 +104,37 @@ async function decryptData(data: ArrayBuffer): Promise<string> {
     return new TextDecoder().decode(decrypted);
 }
 
-// Encrypted Web storage using IndexedDB
-const encryptedWebStorage = {
+// Simple localStorage wrapper for web (more reliable than IndexedDB)
+// Security warning is shown in UI to use mobile app for sensitive data
+const webStorage = {
     async getItemAsync(key: string): Promise<string | null> {
         if (typeof window === 'undefined') return null;
-
         try {
-            // Fall back to localStorage if encryption not initialized
-            if (!webEncryptionKey) {
-                return window.localStorage?.getItem(key) || null;
-            }
-
-            const db = await openDatabase();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readonly');
-                const store = tx.objectStore(STORE_NAME);
-                const request = store.get(key);
-                request.onerror = () => reject(request.error);
-                request.onsuccess = async () => {
-                    if (!request.result) {
-                        resolve(null);
-                        return;
-                    }
-                    try {
-                        const decrypted = await decryptData(request.result);
-                        resolve(decrypted);
-                    } catch {
-                        resolve(null);
-                    }
-                };
-            });
-        } catch {
             return window.localStorage?.getItem(key) || null;
+        } catch (e) {
+            console.warn('localStorage.getItem failed:', e);
+            return null;
         }
     },
 
     async setItemAsync(key: string, value: string): Promise<void> {
         if (typeof window === 'undefined') return;
-
         try {
-            // Fall back to localStorage if encryption not initialized
-            if (!webEncryptionKey) {
-                window.localStorage?.setItem(key, value);
-                return;
-            }
-
-            const encrypted = await encryptData(value);
-            const db = await openDatabase();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readwrite');
-                const store = tx.objectStore(STORE_NAME);
-                const request = store.put(encrypted, key);
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => resolve();
-            });
-        } catch {
             window.localStorage?.setItem(key, value);
+        } catch (e) {
+            console.warn('localStorage.setItem failed:', e);
         }
     },
 
     async deleteItemAsync(key: string): Promise<void> {
         if (typeof window === 'undefined') return;
-
         try {
             window.localStorage?.removeItem(key);
-
-            if (!webEncryptionKey) return;
-
-            const db = await openDatabase();
-            return new Promise((resolve, reject) => {
-                const tx = db.transaction(STORE_NAME, 'readwrite');
-                const store = tx.objectStore(STORE_NAME);
-                const request = store.delete(key);
-                request.onerror = () => reject(request.error);
-                request.onsuccess = () => resolve();
-            });
-        } catch {
-            // Ignore errors
+        } catch (e) {
+            console.warn('localStorage.removeItem failed:', e);
         }
     },
 };
-
-// Use the encrypted storage for web
-const webStorage = encryptedWebStorage;
 
 /**
  * Store a keypair securely in the device keychain with iCloud sync
