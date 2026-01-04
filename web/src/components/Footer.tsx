@@ -29,7 +29,7 @@ export default function Footer() {
                 <Link href="/docs">Technical Paper</Link>
                 <a href="https://github.com/SerPepe/KeyApp" target="_blank" rel="noopener noreferrer">Source Code</a>
                 <Link href="/privacy">Privacy Policy</Link>
-                <a href="#" target="_blank" rel="noopener noreferrer">$KEY Chart</a>
+                <a href="https://dexscreener.com/solana/fzltymcff2zz85zvzwgjwnkvctfiqdt9wxgapmzvwoap" target="_blank" rel="noopener noreferrer">$KEY Chart</a>
                 <a href="https://twitter.com/keyfoundation" target="_blank" rel="noopener noreferrer">Twitter</a>
             </nav>
 
