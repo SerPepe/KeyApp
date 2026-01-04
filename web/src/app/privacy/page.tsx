@@ -15,11 +15,11 @@ export default function PrivacyPage() {
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ duration: 0.8 }}
                     >
-                        <h1 className="title-large mb-12 text-center">Privacy Protocol</h1>
+                        <h1 className="title-large mb-12 text-left">Privacy Protocol</h1>
 
                         <div className="prose prose-invert max-w-none">
                             <section className="mb-12">
-                                <p className="subtitle mb-8 text-center accent">
+                                <p className="subtitle mb-8 text-left accent">
                                     LAST UPDATED: DECEMBER 2025
                                 </p>
 
@@ -35,10 +35,24 @@ export default function PrivacyPage() {
                                 <section className="engine-section !py-8 !border-0 !bg-transparent">
                                     <h2 className="text-2xl font-cinzel text-accent mb-4">1. Zero-Knowledge Architecture</h2>
                                     <p className="opacity-80 leading-relaxed">
-                                        Our systems are built on a zero-knowledge proof architecture.
-                                        We do not have access to your private keys, your messages, or your contacts.
-                                        All encryption happens locally on your device before any data touches our relays.
-                                        What we cannot see, we cannot sell, share, or surrender.
+                                        ### 4. Styling & CSS Fixes
+                                        - **Modal Styling**: Converted Tailwind classes to plain CSS to ensure the modal is correctly styled in a non-Tailwind environment.
+                                        - **Open Key Web**: Fixed utility classes for the "Open Key Web" link (added `underline` and fixed `hover-opacity`).
+                                        - **Global CSS**: Added new utility classes (`.text-accent`, `.underline`, `.hover-opacity`) for consistent styling across components.
+
+                                        ## Verification Results
+
+                                        ### Build Status
+                                        The project builds successfully:
+                                        ```bash
+                                        ✓ Compiled successfully
+                                        ✓ Finished TypeScript
+                                        ✓ Generating static pages (6/6)
+                                        ```
+
+                                        ### Visual Verification
+                                        - **Modal**: Now correctly styled with the retro aesthetic, proper borders, and backdrop blur.
+                                        - **Open Key Web**: Correctly underlined and changes opacity on hover.
                                     </p>
                                 </section>
 

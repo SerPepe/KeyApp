@@ -77,9 +77,16 @@ p {
 
 section {
   padding: 8rem 2rem;
+  width: 100% !important;
+  max-width: none !important;
+  position: relative;
+  margin: 0 !important;
+}
+
+.container {
   max-width: 1200px;
   margin: 0 auto;
-  position: relative;
+  width: 100%;
 }
 
 .title-large {
@@ -137,6 +144,7 @@ section {
   min-height: 100vh;
   display: flex;
   align-items: center;
+  justify-content: center;
 }
 
 .hero-grid {
@@ -144,7 +152,8 @@ section {
   grid-template-columns: 1.2fr 1fr;
   gap: 4rem;
   align-items: center;
-  width: 100%;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .hero-visual {
@@ -214,6 +223,9 @@ blockquote {
 .arch-header {
   text-align: center;
   margin-bottom: 8rem;
+  max-width: 1200px;
+  margin-left: auto;
+  margin-right: auto;
 }
 
 .arch-header h2 {
@@ -225,6 +237,8 @@ blockquote {
   grid-template-columns: 1.2fr 1fr;
   gap: 6rem;
   align-items: center;
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .arch-specs {
@@ -271,6 +285,12 @@ blockquote {
   background: rgba(212, 175, 55, 0.03);
   border-top: 1px solid rgba(212, 175, 55, 0.1);
   padding: 10rem 2rem;
+  width: 100%;
+}
+
+.treasury-content {
+  max-width: 1200px;
+  margin: 0 auto;
 }
 
 .treasury-grid {
@@ -473,4 +493,119 @@ blockquote {
     left: 0;
     background: linear-gradient(to right, var(--accent), transparent);
   }
+}
+
+/* Modal Styles */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(0, 0, 0, 0.7);
+  backdrop-filter: blur(4px);
+  z-index: 1000;
+}
+
+.modal-container {
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  width: 95%;
+  max-width: 450px;
+  background: var(--canvas);
+  border: 1px solid var(--accent);
+  padding: 3rem 2rem;
+  z-index: 1001;
+  box-shadow: 0 0 50px rgba(212, 175, 55, 0.15);
+  border-radius: 8px;
+}
+
+.modal-close {
+  position: absolute;
+  top: 1.5rem;
+  right: 1.5rem;
+  background: none;
+  border: none;
+  color: var(--ink);
+  opacity: 0.5;
+  cursor: pointer;
+  transition: opacity 0.3s;
+}
+
+.modal-close:hover {
+  opacity: 1;
+}
+
+.modal-options {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+  margin-top: 2rem;
+}
+
+.modal-option {
+  display: flex;
+  align-items: center;
+  gap: 1.5rem;
+  padding: 1.25rem;
+  border: 1px solid rgba(245, 245, 220, 0.1);
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.3s ease;
+  border-radius: 4px;
+}
+
+.modal-option:not(.disabled):hover {
+  border-color: var(--accent);
+  background: rgba(212, 175, 55, 0.05);
+}
+
+.modal-option.disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+}
+
+.option-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(245, 245, 220, 0.05);
+  border-radius: 4px;
+  color: var(--ink);
+}
+
+.modal-option:not(.disabled):hover .option-icon {
+  color: var(--accent);
+  background: rgba(212, 175, 55, 0.1);
+}
+
+.option-title {
+  font-family: var(--font-cinzel), serif;
+  font-size: 1.1rem;
+  margin-bottom: 0.25rem;
+}
+
+.option-status {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.7rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+/* Utilities */
+.text-accent {
+  color: var(--accent) !important;
+}
+
+.underline {
+  text-decoration: underline !important;
+}
+
+.transition-opacity {
+  transition: opacity 0.3s ease;
+}
+
+.hover-opacity:hover {
+  opacity: 0.8 !important;
 }

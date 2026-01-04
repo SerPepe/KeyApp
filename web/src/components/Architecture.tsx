@@ -11,34 +11,36 @@ export default function Architecture() {
 
     return (
         <section className="arch-section">
-            <div className="arch-header">
-                <motion.h2
-                    initial={{ opacity: 0, y: 20 }}
-                    whileInView={{ opacity: 1, y: 0 }}
-                    viewport={{ once: true }}
-                    transition={{ duration: 1 }}
-                >Zero Knowledge. Zero Cost.</motion.h2>
-            </div>
-
-            <div className="arch-grid">
-                <div className="arch-visual">
-                    <SmartphoneSketch />
+            <div className="container">
+                <div className="arch-header">
+                    <motion.h2
+                        initial={{ opacity: 0, y: 20 }}
+                        whileInView={{ opacity: 1, y: 0 }}
+                        viewport={{ once: true }}
+                        transition={{ duration: 1 }}
+                    >Zero Knowledge. Zero Cost.</motion.h2>
                 </div>
 
-                <div className="arch-specs">
-                    {specs.map((spec, i) => (
-                        <motion.div
-                            key={i}
-                            className="spec-item"
-                            initial={{ opacity: 0, x: 30 }}
-                            whileInView={{ opacity: 1, x: 0 }}
-                            viewport={{ once: true }}
-                            transition={{ duration: 0.8, delay: i * 0.2 }}
-                        >
-                            <h3 className="accent">{spec.title}</h3>
-                            <p className="mono">{spec.desc}</p>
-                        </motion.div>
-                    ))}
+                <div className="arch-grid">
+                    <div className="arch-visual">
+                        <SmartphoneSketch />
+                    </div>
+
+                    <div className="arch-specs">
+                        {specs.map((spec, i) => (
+                            <motion.div
+                                key={i}
+                                className="spec-item"
+                                initial={{ opacity: 0, x: 30 }}
+                                whileInView={{ opacity: 1, x: 0 }}
+                                viewport={{ once: true }}
+                                transition={{ duration: 0.8, delay: i * 0.2 }}
+                            >
+                                <h3 className="accent">{spec.title}</h3>
+                                <p className="mono">{spec.desc}</p>
+                            </motion.div>
+                        ))}
+                    </div>
                 </div>
             </div>
         </section>

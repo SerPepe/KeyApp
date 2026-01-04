@@ -10,6 +10,7 @@ export default function Footer() {
                 className="footer-logo"
                 initial={{ opacity: 0 }}
                 whileInView={{ opacity: 1 }}
+                whileHover={{ scale: 1.05, textShadow: "0 0 40px rgba(212,175,55,0.4)" }}
                 viewport={{ once: true }}
                 transition={{ duration: 1.5 }}
             >
@@ -24,9 +25,9 @@ export default function Footer() {
             </motion.div>
 
             <nav className="footer-nav">
-                <a href="https://github.com/key-foundation" target="_blank" rel="noopener noreferrer">Manifesto</a>
+                <Link href="/docs#manifesto">Manifesto</Link>
                 <Link href="/docs">Technical Paper</Link>
-                <a href="https://github.com/key-foundation" target="_blank" rel="noopener noreferrer">Source Code</a>
+                <a href="https://github.com/SerPepe/KeyApp" target="_blank" rel="noopener noreferrer">Source Code</a>
                 <Link href="/privacy">Privacy Policy</Link>
                 <a href="#" target="_blank" rel="noopener noreferrer">$KEY Chart</a>
                 <a href="https://twitter.com/keyfoundation" target="_blank" rel="noopener noreferrer">Twitter</a>
