@@ -190,14 +190,17 @@ const webStorage = encryptedWebStorage;
 
 /**
  * Store a keypair securely in the device keychain with iCloud sync
+ * @param keypair - The keypair to store
+ * @param ephemeral - When true, store locally only (no iCloud sync). Default: false
  */
-export async function storeKeypair(keypair: KeyPair): Promise<void> {
+export async function storeKeypair(keypair: KeyPair, ephemeral: boolean = false): Promise<void> {
     if (Platform.OS === 'web') {
         // Web: keep localStorage for now (security warning shown in UI)
         await webStorage.setItemAsync('key_private_key', uint8ToBase64(keypair.secretKey));
         await webStorage.setItemAsync('key_public_key', uint8ToBase64(keypair.publicKey));
     } else {
-        // iOS/Android: use react-native-keychain with iCloud sync
+        // iOS/Android: use react-native-keychain with iCloud sync (unless ephemeral)
+        const synchronizable = !ephemeral;
         try {
             await Keychain.setGenericPassword(
                 'keypair',
@@ -208,8 +211,8 @@ export async function storeKeypair(keypair: KeyPair): Promise<void> {
                 {
                     service: SERVICE_NAME,
                     accessible: Keychain.ACCESSIBLE.AFTER_FIRST_UNLOCK,
-                    // Enable iCloud Keychain sync on iOS
-                    synchronizable: true,
+                    // Enable iCloud Keychain sync on iOS (unless ephemeral mode)
+                    synchronizable,
                 }
             );
         } catch (error) {
@@ -303,11 +306,14 @@ export async function deleteIdentity(): Promise<void> {
 
 /**
  * Store the registered username with iCloud sync
+ * @param username - The username to store
+ * @param ephemeral - When true, store locally only (no iCloud sync). Default: false
  */
-export async function storeUsername(username: string): Promise<void> {
+export async function storeUsername(username: string, ephemeral: boolean = false): Promise<void> {
     if (Platform.OS === 'web') {
         await webStorage.setItemAsync('key_username', username);
     } else {
+        const synchronizable = !ephemeral;
         try {
             await Keychain.setGenericPassword(
                 'username',
@@ -315,7 +321,7 @@ export async function storeUsername(username: string): Promise<void> {
                 {
                     service: USERNAME_SERVICE,
                     accessible: Keychain.ACCESSIBLE.AFTER_FIRST_UNLOCK,
-                    synchronizable: true,
+                    synchronizable,
                 }
             );
         } catch (error) {
@@ -347,5 +353,49 @@ export async function getStoredUsername(): Promise<string | null> {
     } catch (error) {
         console.warn('Username fetch failed:', error);
         return null;
+    }
+}
+
+/**
+ * Toggle identity sync mode between iCloud and local-only.
+ * Re-stores the existing keypair and username with the new synchronizable setting.
+ * 
+ * @param ephemeral - When true, identity is local-only (deleted with app).
+ *                    When false, identity syncs to iCloud Keychain.
+ * @returns true if successful, false if failed
+ */
+export async function setIdentitySyncMode(ephemeral: boolean): Promise<boolean> {
+    if (Platform.OS === 'web') {
+        // Web doesn't have iCloud sync, always local
+        console.log('🔒 Web platform: identity is always local');
+        return true;
+    }
+
+    try {
+        // 1. Get existing keypair and username
+        const keypair = await getStoredKeypair();
+        const username = await getStoredUsername();
+
+        if (!keypair) {
+            console.error('Cannot change sync mode: no keypair found');
+            return false;
+        }
+
+        console.log(`🔄 Changing identity sync mode to: ${ephemeral ? 'LOCAL ONLY' : 'iCloud'}`);
+
+        // 2. Re-store keypair with new sync setting
+        // This effectively updates the synchronizable flag
+        await storeKeypair(keypair, ephemeral);
+
+        // 3. Re-store username if exists
+        if (username) {
+            await storeUsername(username, ephemeral);
+        }
+
+        console.log(`✅ Identity sync mode changed to: ${ephemeral ? 'LOCAL ONLY (ephemeral)' : 'iCloud sync'}`);
+        return true;
+    } catch (error) {
+        console.error('Failed to change identity sync mode:', error);
+        return false;
     }
 }

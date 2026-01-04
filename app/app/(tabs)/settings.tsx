@@ -10,6 +10,7 @@ import {
     Dimensions,
     Linking,
     Image,
+    Switch,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -17,7 +18,7 @@ import { useRouter } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '@/constants/Colors';
-import { getStoredUsername, getStoredKeypair, deleteIdentity } from '@/lib/keychain';
+import { getStoredUsername, getStoredKeypair, deleteIdentity, setIdentitySyncMode } from '@/lib/keychain';
 import { clearAllData } from '@/lib/storage';
 import { pickImage, requestMediaPermissions } from '@/lib/imageUtils';
 import { uint8ToBase58 } from '@/lib/crypto';
@@ -34,6 +35,7 @@ export default function SettingsScreen() {
     const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
     const [userSettings, setUserSettings] = useState<UserSettings>({});
     const [avatarUri, setAvatarUri] = useState<string | null>(null);
+    const [isTogglingEphemeral, setIsTogglingEphemeral] = useState(false);
 
     useEffect(() => {
         loadIdentity();
@@ -94,6 +96,53 @@ export default function SettingsScreen() {
         setUserSettings(prev => ({ ...prev, chatBackgroundColor: color }));
         if (Platform.OS !== 'web') {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+    };
+
+    const handleEphemeralToggle = async (value: boolean) => {
+        if (value) {
+            // Show warning when enabling ephemeral mode
+            Alert.alert(
+                '⚠️ Auto-Burn on Uninstall',
+                'When enabled, your identity is stored locally only. If you delete the app, your identity will be PERMANENTLY LOST and cannot be recovered.\n\nYou will lose access to:\n• Your username\n• All message history\n• Your cryptographic keys',
+                [
+                    { text: 'Cancel', style: 'cancel' },
+                    {
+                        text: 'Enable',
+                        style: 'destructive',
+                        onPress: async () => {
+                            await toggleEphemeralMode(true);
+                        },
+                    },
+                ]
+            );
+        } else {
+            await toggleEphemeralMode(false);
+        }
+    };
+
+    const toggleEphemeralMode = async (ephemeral: boolean) => {
+        setIsTogglingEphemeral(true);
+        try {
+            const success = await setIdentitySyncMode(ephemeral);
+            if (success) {
+                await saveUserSettings({ ephemeralMode: ephemeral });
+                setUserSettings(prev => ({ ...prev, ephemeralMode: ephemeral }));
+                if (Platform.OS !== 'web') {
+                    Haptics.notificationAsync(
+                        ephemeral
+                            ? Haptics.NotificationFeedbackType.Warning
+                            : Haptics.NotificationFeedbackType.Success
+                    );
+                }
+            } else {
+                Alert.alert('Error', 'Failed to change identity sync mode. Please try again.');
+            }
+        } catch (error) {
+            console.error('Failed to toggle ephemeral mode:', error);
+            Alert.alert('Error', 'An unexpected error occurred.');
+        } finally {
+            setIsTogglingEphemeral(false);
         }
     };
 
@@ -273,6 +322,31 @@ export default function SettingsScreen() {
                                     compact
                                 />
                             </Pressable>
+                            {/* Auto-burn toggle - only show on native (no iCloud on web) */}
+                            {Platform.OS !== 'web' && (
+                                <>
+                                    <View style={styles.divider} />
+                                    <View style={styles.ephemeralRow}>
+                                        <View style={styles.ephemeralInfo}>
+                                            <Ionicons name="flame-outline" size={18} color={userSettings.ephemeralMode ? Colors.error : Colors.primary} />
+                                            <View style={styles.ephemeralText}>
+                                                <Text style={[styles.settingsRowTitle, { fontSize: 13 }]}>Auto-burn</Text>
+                                                <Text style={styles.ephemeralSubtitle}>
+                                                    {userSettings.ephemeralMode ? 'Local only' : 'iCloud sync'}
+                                                </Text>
+                                            </View>
+                                        </View>
+                                        <Switch
+                                            value={userSettings.ephemeralMode ?? false}
+                                            onValueChange={handleEphemeralToggle}
+                                            disabled={isTogglingEphemeral}
+                                            trackColor={{ false: '#3e3e3e', true: 'rgba(255, 107, 107, 0.4)' }}
+                                            thumbColor={userSettings.ephemeralMode ? Colors.error : Colors.primary}
+                                            ios_backgroundColor="#3e3e3e"
+                                        />
+                                    </View>
+                                </>
+                            )}
                         </View>
                     </View>
 
@@ -606,5 +680,24 @@ const styles = StyleSheet.create({
     },
     colorSwatchSelected: {
         borderColor: Colors.primary,
+    },
+    ephemeralRow: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 4,
+    },
+    ephemeralInfo: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    ephemeralText: {
+        marginLeft: 10,
+    },
+    ephemeralSubtitle: {
+        fontSize: 10,
+        color: Colors.textMuted,
+        marginTop: 1,
     },
 });

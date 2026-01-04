@@ -12,6 +12,10 @@ export interface UserSettings {
 
     // Theme accent color
     accentColor?: string;
+
+    // Security: When true, identity stored locally only (no iCloud sync)
+    // Deleting the app = identity gone forever
+    ephemeralMode?: boolean;
 }
 
 /**

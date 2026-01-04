@@ -152,10 +152,19 @@ function RootLayoutNav() {
         } catch (err) {
           console.warn('Failed to start message listener:', err);
         }
-
-        // Consider the user onboarded only if both key and username exist
-        setHasIdentity(!!keypair && !!resolvedUsername);
       }
+
+      // Diagnostic logging
+      console.log('🔍 Auth state:', {
+        hasKeypair: !!keypair,
+        cachedUsername,
+        resolvedUsername,
+        decision: !!keypair && !!resolvedUsername
+      });
+
+      // Always set identity state based on actual values (moved outside conditional)
+      // This ensures we don't get stuck in onboarding if username recovery fails
+      setHasIdentity(!!keypair && !!resolvedUsername);
     } catch (error) {
       console.error('Auth check failed:', error);
       setHasIdentity(false);
