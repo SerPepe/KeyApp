@@ -24,6 +24,11 @@ const spaceMono = Space_Mono({
 export const metadata: Metadata = {
   title: "Key Foundation | The Sovereign Whisper",
   description: "Unstoppable, encrypted communication. Powered by Solana. Free forever.",
+  icons: {
+    icon: '/key.png',
+    shortcut: '/key.png',
+    apple: '/key.png',
+  },
 };
 
 export default function RootLayout({
