@@ -4,11 +4,6 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import Footer from "@/components/Footer"
 
-export const metadata = {
-    title: "Developers | Key Protocol",
-    description: "Build on Key Protocol - developer documentation, API reference, code examples, and community resources"
-}
-
 export default function Developers() {
     const fadeIn = {
         hidden: { opacity: 0, y: 20 },

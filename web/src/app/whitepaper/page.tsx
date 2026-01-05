@@ -4,11 +4,6 @@ import { motion } from "framer-motion"
 import Link from "next/link"
 import Footer from "@/components/Footer"
 
-export const metadata = {
-    title: "Whitepaper | Key Protocol",
-    description: "Technical whitepaper for the Key Protocol - a permissionless messaging protocol on Solana with end-to-end encryption"
-}
-
 export default function Whitepaper() {
     const fadeIn = {
         hidden: { opacity: 0, y: 20 },

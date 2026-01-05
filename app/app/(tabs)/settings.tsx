@@ -309,6 +309,45 @@ export default function SettingsScreen() {
                     </View>
                 </View>
 
+                {/* Auto-burn Section - Same width as boxes above */}
+                {Platform.OS !== 'web' && (
+                    <View style={styles.compactGrid}>
+                        <View style={styles.gridFull}>
+                            <Text style={styles.sectionTitle}>Identity Sync</Text>
+                            <Pressable
+                                style={({ pressed }) => [
+                                    styles.ephemeralCard,
+                                    userSettings.ephemeralMode && styles.ephemeralCardActive,
+                                    pressed && styles.ephemeralCardPressed,
+                                ]}
+                                onPress={() => handleEphemeralToggle(!userSettings.ephemeralMode)}
+                                disabled={isTogglingEphemeral}
+                            >
+                                <View style={styles.ephemeralCardContent}>
+                                    <Ionicons
+                                        name="flame-outline"
+                                        size={22}
+                                        color={userSettings.ephemeralMode ? Colors.error : Colors.primary}
+                                    />
+                                    <View style={styles.ephemeralCardText}>
+                                        <Text style={styles.ephemeralCardTitle}>
+                                            Auto-burn on Uninstall
+                                        </Text>
+                                        <Text style={styles.ephemeralCardSubtitle}>
+                                            {userSettings.ephemeralMode ? 'Local only - keys deleted on uninstall' : 'iCloud sync - keys backed up'}
+                                        </Text>
+                                    </View>
+                                </View>
+                                <Ionicons
+                                    name={userSettings.ephemeralMode ? "checkmark-circle" : "ellipse-outline"}
+                                    size={26}
+                                    color={userSettings.ephemeralMode ? Colors.error : Colors.textMuted}
+                                />
+                            </Pressable>
+                        </View>
+                    </View>
+                )}
+
                 {/* Combined System Sections for compactness */}
                 <View style={styles.compactGrid}>
                     <View style={styles.gridHalf}>
@@ -337,42 +376,6 @@ export default function SettingsScreen() {
                                     compact
                                 />
                             </Pressable>
-                            {/* Auto-burn button - only show on native (no iCloud on web) */}
-                            {Platform.OS !== 'web' && (
-                                <>
-                                    <View style={styles.divider} />
-                                    <Pressable
-                                        style={({ pressed }) => [
-                                            styles.ephemeralButton,
-                                            userSettings.ephemeralMode && styles.ephemeralButtonActive,
-                                            pressed && styles.ephemeralButtonPressed,
-                                        ]}
-                                        onPress={handleEphemeralToggle}
-                                        disabled={isTogglingEphemeral}
-                                    >
-                                        <View style={styles.ephemeralButtonContent}>
-                                            <Ionicons
-                                                name="flame-outline"
-                                                size={18}
-                                                color={userSettings.ephemeralMode ? Colors.error : Colors.primary}
-                                            />
-                                            <View style={styles.ephemeralText}>
-                                                <Text style={[styles.settingsRowTitle, { fontSize: 14 }]}>
-                                                    Auto-burn
-                                                </Text>
-                                                <Text style={styles.ephemeralSubtitle}>
-                                                    {userSettings.ephemeralMode ? 'Local only' : 'iCloud sync'}
-                                                </Text>
-                                            </View>
-                                        </View>
-                                        <Ionicons
-                                            name={userSettings.ephemeralMode ? "checkmark-circle" : "ellipse-outline"}
-                                            size={24}
-                                            color={userSettings.ephemeralMode ? Colors.error : Colors.textMuted}
-                                        />
-                                    </Pressable>
-                                </>
-                            )}
                         </View>
                     </View>
 
@@ -591,6 +594,9 @@ const styles = StyleSheet.create({
     gridHalf: {
         flex: 1,
     },
+    gridFull: {
+        flex: 1,
+    },
     cardCompact: {
         backgroundColor: 'rgba(255, 255, 255, 0.03)',
         borderRadius: 12,
@@ -706,6 +712,44 @@ const styles = StyleSheet.create({
     colorSwatchSelected: {
         borderWidth: 2,
         borderColor: Colors.primary,
+    },
+    ephemeralCard: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'space-between',
+        paddingVertical: 16,
+        paddingHorizontal: 16,
+        borderRadius: 12,
+        backgroundColor: 'rgba(255, 255, 255, 0.03)',
+        borderWidth: 1,
+        borderColor: 'rgba(255, 255, 255, 0.05)',
+    },
+    ephemeralCardActive: {
+        borderColor: Colors.error,
+        backgroundColor: 'rgba(255, 107, 107, 0.08)',
+    },
+    ephemeralCardPressed: {
+        opacity: 0.7,
+        transform: [{ scale: 0.98 }],
+    },
+    ephemeralCardContent: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        flex: 1,
+    },
+    ephemeralCardText: {
+        marginLeft: 14,
+        flex: 1,
+    },
+    ephemeralCardTitle: {
+        fontSize: 14,
+        fontWeight: '600',
+        color: Colors.text,
+    },
+    ephemeralCardSubtitle: {
+        fontSize: 11,
+        color: Colors.textMuted,
+        marginTop: 2,
     },
     ephemeralButton: {
         flexDirection: 'row',

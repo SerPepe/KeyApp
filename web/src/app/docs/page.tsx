@@ -366,9 +366,14 @@ export default function Docs() {
                             08. Developer Guide
                         </h2>
                         <div className="space-y-8">
-                            <p className="text-lg leading-relaxed opacity-80">
-                                Build your own Key client using the open protocol. No permission needed - the protocol is fully permissionless.
-                            </p>
+                            <div className="p-6 bg-[rgba(0,127,255,0.08)] border border-[rgba(0,127,255,0.2)] rounded-lg mb-8">
+                                <p className="text-lg leading-relaxed opacity-90 mb-4">
+                                    Build your own Key client using the open protocol. No permission needed - the protocol is fully permissionless.
+                                </p>
+                                <Link href="/developers" className="inline-flex items-center gap-2 mono text-sm signal hover:underline">
+                                    View Full Developer Portal & API Reference →
+                                </Link>
+                            </div>
 
                             <div className="p-6 bg-[rgba(212,175,55,0.03)] border border-[rgba(212,175,55,0.1)] rounded-lg">
                                 <h3 className="mono text-xs accent uppercase mb-4 tracking-widest">What You Can Build</h3>
