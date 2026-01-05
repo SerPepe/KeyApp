@@ -289,7 +289,7 @@ export default function Docs() {
                                     <li>✓ No plaintext storage - messages encrypted before Arweave upload</li>
                                     <li>✓ Server cannot read - backend only routes encrypted blobs</li>
                                     <li>✓ Forward secrecy - new symmetric key per message</li>
-                                    <li>✓ Metadata minimal - Redis only stores group name + member list</li>
+                                    <li>✓ Metadata on-chain - groups stored on Solana with Redis cache</li>
                                 </ul>
                             </div>
                         </div>
@@ -502,6 +502,10 @@ export default function Docs() {
                                         <li>• /api/message/send</li>
                                         <li>• /api/message/inbox/:pubkey</li>
                                         <li>• /api/groups/create</li>
+                                        <li>• /api/groups/invite</li>
+                                        <li>• /api/groups/leave</li>
+                                        <li>• /api/groups/join/:code</li>
+                                        <li>• /api/groups/public/search</li>
                                         <li>• /api/message/group/:id/send</li>
                                     </ul>
                                 </div>

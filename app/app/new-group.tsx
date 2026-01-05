@@ -15,7 +15,7 @@ import { useRouter, Stack } from 'expo-router';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '@/constants/Colors';
-import { createGroup, inviteToGroup, getPublicKeyByUsername } from '@/lib/api';
+import { createGroupSimple, inviteToGroup, getPublicKeyByUsername } from '@/lib/api';
 import { getStoredKeypair } from '@/lib/keychain';
 import { uint8ToBase58 } from '@/lib/crypto';
 import { getChats, saveChat, type Chat } from '@/lib/storage';
@@ -131,7 +131,7 @@ export default function NewGroupScreen() {
             const ownerPubkey = uint8ToBase58(keypair.publicKey);
 
             // Create group
-            const result = await createGroup(trimmedName, ownerPubkey);
+            const result = await createGroupSimple(trimmedName, ownerPubkey);
 
             // Invite all selected members
             await Promise.all(
