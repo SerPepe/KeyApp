@@ -10,7 +10,7 @@ import bs58 from 'bs58';
 import { connection, getFeePayer } from './solana.js';
 
 // Program ID from deployed Anchor program
-const PROGRAM_ID = new PublicKey('3vGCh9JwoV5Uk4MdcHGfmAKCZPu8bENE1NkXw9CCpxNA');
+const PROGRAM_ID = new PublicKey('96hG67JxhNEptr1LkdtDcrqvtWiHH3x4GibDBcdh4MYQ');
 
 // ============================================================================
 // Discriminator Calculation

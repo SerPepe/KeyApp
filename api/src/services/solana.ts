@@ -12,7 +12,7 @@ import bs58 from 'bs58';
 import { config } from '../config.js';
 
 // Program ID from deployed Anchor program
-const PROGRAM_ID = new PublicKey('3vGCh9JwoV5Uk4MdcHGfmAKCZPu8bENE1NkXw9CCpxNA');
+const PROGRAM_ID = new PublicKey('96hG67JxhNEptr1LkdtDcrqvtWiHH3x4GibDBcdh4MYQ');
 
 // Initialize connection to Solana
 export const connection = new Connection(config.solanaRpcUrl, 'confirmed');
