@@ -1,7 +1,7 @@
 import { getStoredKeypair } from './keychain';
 import { signMessage, uint8ToBase58, uint8ToBase64 } from './crypto';
 
-const API_URL = process.env.EXPO_PUBLIC_API_URL || 'http://localhost:3001/api';
+const API_BASE_URL = process.env.EXPO_PUBLIC_API_URL || 'https://keyapp-production.up.railway.app';
 
 export type ReceiptType = 'delivered' | 'read';
 
@@ -35,7 +35,7 @@ export async function sendReceipt(messageId: string, type: ReceiptType): Promise
         const signatureBytes = signMessage(new TextEncoder().encode(messageToSign), keypair.secretKey);
         const signature = uint8ToBase64(signatureBytes);
 
-        const response = await fetch(`${API_URL}/receipt`, {
+        const response = await fetch(`${API_BASE_URL}/api/receipt`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -64,7 +64,7 @@ export async function sendReceipt(messageId: string, type: ReceiptType): Promise
  */
 export async function getReceipts(messageId: string): Promise<MessageReceipts | null> {
     try {
-        const response = await fetch(`${API_URL}/receipt/${messageId}`);
+        const response = await fetch(`${API_BASE_URL}/api/receipt/${messageId}`);
 
         if (!response.ok) {
             return null;

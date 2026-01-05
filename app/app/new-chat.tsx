@@ -44,10 +44,11 @@ export default function NewChatScreen() {
                 return;
             }
 
-            // Save chat and navigate
+            // Save chat and navigate (1-on-1 chat, not a group)
             await saveChat({
                 username: trimmed,
                 publicKey: user.publicKey,
+                isGroup: false,
                 unreadCount: 0,
             });
 

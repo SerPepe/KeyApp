@@ -46,7 +46,7 @@ export function EmojiPicker({ visible, onClose, onSelectEmoji }: EmojiPickerProp
                     {/* Header */}
                     <View style={styles.header}>
                         <View style={styles.handle} />
-                        <Text style={styles.title}>Pepe Emojis</Text>
+                        <Text style={styles.title}>Keymojis</Text>
                         <Pressable onPress={onClose} style={styles.closeButton}>
                             <Ionicons name="close" size={24} color={Colors.text} />
                         </Pressable>

@@ -10,7 +10,6 @@ import {
     Dimensions,
     Linking,
     Image,
-    Switch,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { LinearGradient } from 'expo-linear-gradient';
@@ -96,6 +95,18 @@ export default function SettingsScreen() {
         setUserSettings(prev => ({ ...prev, chatBackgroundColor: color }));
         if (Platform.OS !== 'web') {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+        }
+    };
+
+    const handleCustomBackground = async () => {
+        const image = await pickImage();
+        if (image) {
+            const imageUri = `data:${image.mimeType};base64,${image.base64}`;
+            await saveUserSettings({ chatBackgroundImage: imageUri });
+            setUserSettings(prev => ({ ...prev, chatBackgroundImage: imageUri }));
+            if (Platform.OS !== 'web') {
+                Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Light);
+            }
         }
     };
 
@@ -326,29 +337,40 @@ export default function SettingsScreen() {
                                     compact
                                 />
                             </Pressable>
-                            {/* Auto-burn toggle - only show on native (no iCloud on web) */}
+                            {/* Auto-burn button - only show on native (no iCloud on web) */}
                             {Platform.OS !== 'web' && (
                                 <>
                                     <View style={styles.divider} />
-                                    <View style={styles.ephemeralRow}>
-                                        <View style={styles.ephemeralInfo}>
-                                            <Ionicons name="flame-outline" size={18} color={userSettings.ephemeralMode ? Colors.error : Colors.primary} />
+                                    <Pressable
+                                        style={({ pressed }) => [
+                                            styles.ephemeralButton,
+                                            userSettings.ephemeralMode && styles.ephemeralButtonActive,
+                                            pressed && styles.ephemeralButtonPressed,
+                                        ]}
+                                        onPress={handleEphemeralToggle}
+                                        disabled={isTogglingEphemeral}
+                                    >
+                                        <View style={styles.ephemeralButtonContent}>
+                                            <Ionicons
+                                                name="flame-outline"
+                                                size={18}
+                                                color={userSettings.ephemeralMode ? Colors.error : Colors.primary}
+                                            />
                                             <View style={styles.ephemeralText}>
-                                                <Text style={[styles.settingsRowTitle, { fontSize: 13 }]}>Auto-burn</Text>
+                                                <Text style={[styles.settingsRowTitle, { fontSize: 14 }]}>
+                                                    Auto-burn
+                                                </Text>
                                                 <Text style={styles.ephemeralSubtitle}>
                                                     {userSettings.ephemeralMode ? 'Local only' : 'iCloud sync'}
                                                 </Text>
                                             </View>
                                         </View>
-                                        <Switch
-                                            value={userSettings.ephemeralMode ?? false}
-                                            onValueChange={handleEphemeralToggle}
-                                            disabled={isTogglingEphemeral}
-                                            trackColor={{ false: '#3e3e3e', true: 'rgba(255, 107, 107, 0.4)' }}
-                                            thumbColor={userSettings.ephemeralMode ? Colors.error : Colors.primary}
-                                            ios_backgroundColor="#3e3e3e"
+                                        <Ionicons
+                                            name={userSettings.ephemeralMode ? "checkmark-circle" : "ellipse-outline"}
+                                            size={24}
+                                            color={userSettings.ephemeralMode ? Colors.error : Colors.textMuted}
                                         />
-                                    </View>
+                                    </Pressable>
                                 </>
                             )}
                         </View>
@@ -678,30 +700,43 @@ const styles = StyleSheet.create({
         width: 36,
         height: 36,
         borderRadius: 18,
-        borderWidth: 2,
-        borderColor: 'transparent',
+        borderWidth: 0,
         overflow: 'hidden', // Ensures gradients honor the border radius
     },
     colorSwatchSelected: {
+        borderWidth: 2,
         borderColor: Colors.primary,
     },
-    ephemeralRow: {
+    ephemeralButton: {
         flexDirection: 'row',
         alignItems: 'center',
         justifyContent: 'space-between',
-        paddingVertical: 4,
+        paddingVertical: 12,
+        paddingHorizontal: 16,
+        borderRadius: 8,
+        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+        borderWidth: 1,
+        borderColor: 'transparent',
     },
-    ephemeralInfo: {
+    ephemeralButtonActive: {
+        borderColor: Colors.error,
+        backgroundColor: 'rgba(255, 107, 107, 0.1)',
+    },
+    ephemeralButtonPressed: {
+        opacity: 0.7,
+    },
+    ephemeralButtonContent: {
         flexDirection: 'row',
         alignItems: 'center',
         flex: 1,
     },
     ephemeralText: {
         marginLeft: 10,
+        flex: 1,
     },
     ephemeralSubtitle: {
         fontSize: 10,
         color: Colors.textMuted,
-        marginTop: 1,
+        marginTop: 2,
     },
 });

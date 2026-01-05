@@ -26,7 +26,9 @@ export default function Footer() {
 
             <nav className="footer-nav">
                 <Link href="/docs#manifesto">Manifesto</Link>
-                <Link href="/docs">Technical Paper</Link>
+                <Link href="/docs">Technical Docs</Link>
+                <Link href="/whitepaper">Whitepaper</Link>
+                <Link href="/developers">Developers</Link>
                 <a href="https://github.com/SerPepe/KeyApp" target="_blank" rel="noopener noreferrer">Source Code</a>
                 <Link href="/privacy">Privacy Policy</Link>
                 <a href="https://dexscreener.com/solana/fzltymcff2zz85zvzwgjwnkvctfiqdt9wxgapmzvwoap" target="_blank" rel="noopener noreferrer">$KEY Chart</a>

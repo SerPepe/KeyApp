@@ -48,6 +48,7 @@ export default function Architecture() {
 }
 
 function SmartphoneSketch() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const lineVariants: any = {
         hidden: { pathLength: 0, opacity: 0 },
         visible: (i: number) => ({

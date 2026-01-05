@@ -201,3 +201,105 @@ export function signTransaction(transactionBase64: string, secretKey: Uint8Array
 
     return uint8ToBase64(serialized);
 }
+
+/**
+ * Encrypt a message for a group using hybrid encryption
+ * @param message - The plaintext message
+ * @param memberEncryptionKeys - All group members' X25519 public keys
+ * @param senderEncryptionSecret - Sender's X25519 secret key
+ * @returns Encrypted message and per-member encrypted symmetric keys
+ */
+export function encryptGroupMessage(
+    message: string,
+    memberEncryptionKeys: Uint8Array[],
+    senderEncryptionSecret: Uint8Array
+): {
+    encryptedMessage: string;
+    encryptedKeys: { [pubkey: string]: string };
+} {
+    // 1. Generate random symmetric key (ChaCha20)
+    const symmetricKey = nacl.randomBytes(nacl.secretbox.keyLength); // 32 bytes
+
+    // 2. Encrypt message with symmetric key
+    const nonce = nacl.randomBytes(nacl.secretbox.nonceLength); // 24 bytes
+    const messageBytes = new TextEncoder().encode(message);
+    const encrypted = nacl.secretbox(messageBytes, nonce, symmetricKey);
+
+    // 3. Encrypt symmetric key for each member using X25519
+    const encryptedKeys: { [pubkey: string]: string } = {};
+    for (const memberKey of memberEncryptionKeys) {
+        const keyNonce = nacl.randomBytes(nacl.box.nonceLength);
+        const encryptedKey = nacl.box(
+            symmetricKey,
+            keyNonce,
+            memberKey,
+            senderEncryptionSecret
+        );
+        if (!encryptedKey) {
+            throw new Error('Failed to encrypt symmetric key for member');
+        }
+        const combined = new Uint8Array(keyNonce.length + encryptedKey.length);
+        combined.set(keyNonce);
+        combined.set(encryptedKey, keyNonce.length);
+        encryptedKeys[uint8ToBase58(memberKey)] = uint8ToBase64(combined);
+    }
+
+    // 4. Return encrypted message + per-member keys
+    const msgCombined = new Uint8Array(nonce.length + encrypted.length);
+    msgCombined.set(nonce);
+    msgCombined.set(encrypted, nonce.length);
+
+    return {
+        encryptedMessage: uint8ToBase64(msgCombined),
+        encryptedKeys
+    };
+}
+
+/**
+ * Decrypt a group message
+ * @param encryptedMessage - Base64 encoded encrypted message
+ * @param encryptedKeys - Per-member encrypted symmetric keys
+ * @param myPublicKey - Recipient's X25519 public key
+ * @param mySecretKey - Recipient's X25519 secret key
+ * @param senderPublicKey - Sender's X25519 public key
+ * @returns Decrypted plaintext message
+ */
+export function decryptGroupMessage(
+    encryptedMessage: string,
+    encryptedKeys: { [pubkey: string]: string },
+    myPublicKey: Uint8Array,
+    mySecretKey: Uint8Array,
+    senderPublicKey: Uint8Array
+): string {
+    // 1. Find our encrypted symmetric key
+    const myPubkeyStr = uint8ToBase58(myPublicKey);
+    const encryptedKeyForMe = encryptedKeys[myPubkeyStr];
+    if (!encryptedKeyForMe) {
+        throw new Error('No key found for this member');
+    }
+
+    // 2. Decrypt symmetric key using X25519
+    const keyCombined = base64ToUint8(encryptedKeyForMe);
+    const keyNonce = keyCombined.slice(0, nacl.box.nonceLength);
+    const encryptedKey = keyCombined.slice(nacl.box.nonceLength);
+    const symmetricKey = nacl.box.open(
+        encryptedKey,
+        keyNonce,
+        senderPublicKey,
+        mySecretKey
+    );
+    if (!symmetricKey) {
+        throw new Error('Failed to decrypt symmetric key');
+    }
+
+    // 3. Decrypt message with symmetric key
+    const msgCombined = base64ToUint8(encryptedMessage);
+    const msgNonce = msgCombined.slice(0, nacl.secretbox.nonceLength);
+    const msgEncrypted = msgCombined.slice(nacl.secretbox.nonceLength);
+    const decrypted = nacl.secretbox.open(msgEncrypted, msgNonce, symmetricKey);
+    if (!decrypted) {
+        throw new Error('Failed to decrypt message');
+    }
+
+    return new TextDecoder().decode(decrypted);
+}

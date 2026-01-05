@@ -128,4 +128,15 @@ export async function deleteAvatar(username: string): Promise<void> {
     await redis.del(key);
 }
 
+/**
+ * Get group members
+ * @param groupId - The group ID
+ * @returns Array of member public keys
+ */
+export async function getGroupMembers(groupId: string): Promise<string[]> {
+    const key = `group:members:${groupId}`;
+    const members = await redis.smembers(key);
+    return members || [];
+}
+
 export { redis };

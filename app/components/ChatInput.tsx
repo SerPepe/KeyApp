@@ -17,15 +17,17 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { pickImage, takePhoto, requestMediaPermissions, type CompressedImage } from '@/lib/imageUtils';
 
 interface ChatInputProps {
-    onSend: (message: string) => void;
+    onSend?: (message: string) => void;
+    onSendText?: (message: string) => void; // Alternative prop name for compatibility
     onSendImage: (image: CompressedImage) => void;
     onEmojiPress?: () => void;
     pendingEmoji?: string | null;
     onEmojiInserted?: () => void;
     disabled?: boolean;
+    placeholder?: string;
 }
 
-export function ChatInput({ onSend, onSendImage, onEmojiPress, pendingEmoji, onEmojiInserted, disabled }: ChatInputProps) {
+export function ChatInput({ onSend, onSendText, onSendImage, onEmojiPress, pendingEmoji, onEmojiInserted, disabled, placeholder }: ChatInputProps) {
     const [text, setText] = useState('');
     const [selectedImage, setSelectedImage] = useState<CompressedImage | null>(null);
     const [isKeyboardVisible, setKeyboardVisible] = useState(false);
@@ -63,9 +65,12 @@ export function ChatInput({ onSend, onSendImage, onEmojiPress, pendingEmoji, onE
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }
 
-        // Send text if present
+        // Send text if present (support both prop names)
         if (trimmedText) {
-            onSend(trimmedText);
+            const sendFn = onSendText || onSend;
+            if (sendFn) {
+                sendFn(trimmedText);
+            }
         }
 
         // Send image if present
@@ -180,7 +185,7 @@ export function ChatInput({ onSend, onSendImage, onEmojiPress, pendingEmoji, onE
                         value={text}
                         onChangeText={setText}
                         onKeyPress={handleKeyPress}
-                        placeholder="Message"
+                        placeholder={placeholder || "Message"}
                         placeholderTextColor={Colors.textMuted}
                         multiline
                         maxLength={1000}

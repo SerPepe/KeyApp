@@ -61,9 +61,9 @@ export function MessageBubble({
         swipeableRef.current?.close();
     };
 
-    // Calculate border radius based on grouping
+    // Calculate border radius based on grouping (Telegram-style)
     const getBorderRadius = () => {
-        const base = 20;
+        const base = 18;
         const small = 4;
 
         if (message.isMine) {
@@ -235,11 +235,16 @@ const styles = StyleSheet.create({
     },
     bubble: {
         maxWidth: 280,
-        paddingHorizontal: 16,
+        paddingHorizontal: 14,
         paddingVertical: 10,
     },
     bubbleMine: {
         backgroundColor: Colors.bubbleMine,
+        shadowColor: '#000',
+        shadowOffset: { width: 0, height: 1 },
+        shadowOpacity: 0.08,
+        shadowRadius: 2,
+        elevation: 1,
     },
     bubbleTheirs: {
         backgroundColor: Colors.bubbleTheirs,
@@ -282,7 +287,7 @@ const styles = StyleSheet.create({
         color: Colors.error,
     },
     statusConfirmed: {
-        color: 'rgba(0, 0, 0, 0.7)',
+        color: '#0088cc',
     },
     deleteAction: {
         width: 80,

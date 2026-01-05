@@ -193,10 +193,13 @@ router.get('/user/:pubkey', async (req: Request, res: Response) => {
         const groups = await Promise.all(
             groupIds.map(async (groupId) => {
                 const group = await redis.hgetall(`${GROUPS_PREFIX}${groupId}`) as Record<string, string>;
+                const members = await redis.smembers(`${GROUP_MEMBERS_PREFIX}${groupId}`) as string[];
                 return {
                     groupId,
                     name: group?.name || 'Unknown',
                     owner: group?.owner,
+                    createdAt: parseInt(group?.createdAt || '0'),
+                    members,
                 };
             })
         );

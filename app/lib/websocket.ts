@@ -2,10 +2,10 @@ import { Connection, PublicKey, ParsedTransactionWithMeta } from '@solana/web3.j
 import { base64ToUint8, decryptMessage, getEncryptionKeypair } from './crypto';
 import { getStoredKeypair, getStoredUsername } from './keychain';
 import { saveChat, saveMessage, generateMessageId, isSignatureProcessed, addProcessedSignature, type Message } from './storage';
+import { markDelivered } from './receipts';
 import * as Notifications from 'expo-notifications';
 
-// Fallback to Helius devnet RPC to prevent crashes when env var is not set
-const RPC_URL = process.env.EXPO_PUBLIC_SOLANA_RPC_URL || 'https://devnet.helius-rpc.com/?api-key=cd3296e0-204f-4057-bf8a-39f00bb69f8f';
+const RPC_URL = process.env.EXPO_PUBLIC_SOLANA_RPC_URL || 'https://api.devnet.solana.com';
 let connection: Connection | null = null;
 
 function getConnection(): Connection {
@@ -179,19 +179,46 @@ async function tryDecryptMessage(
         const senderEncryptionKey = base64ToUint8(senderData.encryptionKey);
 
         // Try to decrypt
-        const decryptedText = decryptMessage(
+        let decryptedContent = decryptMessage(
             encryptedMessage,
             senderEncryptionKey,
             encryptionKeypair.secretKey
         );
+
+        // Parse message type and image metadata
+        let type: 'text' | 'image' = 'text';
+        let mimeType: string | undefined;
+        let width: number | undefined;
+        let height: number | undefined;
+
+        if (decryptedContent.startsWith('IMG:')) {
+            type = 'image';
+            // New format: IMG:{mimeType}:{width}:{height}:{base64}
+            const parts = decryptedContent.substring(4).split(':');
+
+            if (parts.length === 4) {
+                // New format with metadata
+                mimeType = parts[0];
+                width = parseInt(parts[1], 10);
+                height = parseInt(parts[2], 10);
+                decryptedContent = parts[3];
+            } else {
+                // Old format (backward compatibility): IMG:{base64}
+                decryptedContent = decryptedContent.substring(4);
+                mimeType = 'image/jpeg'; // Default
+            }
+        }
 
         // Create message object
         const chatId = senderData.username || senderPubkey.slice(0, 8);
         const message: Message = {
             id: generateMessageId(),
             chatId,
-            type: 'text',
-            content: decryptedText,
+            type,
+            content: decryptedContent,
+            mimeType,
+            width,
+            height,
             timestamp: tx.blockTime ? tx.blockTime * 1000 : Date.now(),
             isMine: false,
             status: 'confirmed',
@@ -201,16 +228,24 @@ async function tryDecryptMessage(
         // Save to local storage
         await saveMessage(message);
 
-        // Also save/update chat
+        // Mark as delivered
+        if (message.txSignature) {
+            markDelivered(message.txSignature).catch(err =>
+                console.log('Failed to send delivery receipt:', err)
+            );
+        }
+
+        // Also save/update chat (1-on-1 chat, not a group)
         await saveChat({
             username: chatId,
             publicKey: senderPubkey,
-            lastMessage: decryptedText,
+            isGroup: false,
+            lastMessage: type === 'image' ? '📷 Photo' : decryptedContent,
             lastMessageTime: message.timestamp,
             unreadCount: 1,
         });
 
-        console.log(`📩 Decrypted message from @${chatId}: "${decryptedText.slice(0, 20)}..."`);
+        console.log(`📩 Decrypted ${type} from @${chatId}:`, type === 'text' ? `"${decryptedContent.slice(0, 20)}..."` : '(Image Data)');
         return message;
     } catch (error) {
         // Decryption failed - message not for us or invalid format

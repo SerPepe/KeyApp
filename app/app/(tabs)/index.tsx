@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import {
   View,
   Text,
@@ -10,12 +10,15 @@ import {
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
+import { useFocusEffect } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
 import { Colors } from '@/constants/Colors';
-import { getChats, type Chat, deleteChat } from '@/lib/storage';
-import { getStoredUsername } from '@/lib/keychain';
+import { getChats, type Chat, deleteChat, saveChat, saveMessage, generateMessageId, isSignatureProcessed, addProcessedSignature } from '@/lib/storage';
+import { getStoredUsername, getStoredKeypair } from '@/lib/keychain';
 import { ChatListItem } from '@/components/ChatListItem';
 import { onNewMessage } from '@/lib/websocket';
+import { fetchInbox, getUsernameByOwner, getUserGroups } from '@/lib/api';
+import { uint8ToBase58, base64ToUint8, getEncryptionKeypair, decryptMessage } from '@/lib/crypto';
 
 export default function ChatsScreen() {
   const router = useRouter();
@@ -23,22 +26,63 @@ export default function ChatsScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
 
-  useEffect(() => {
-    loadData();
+  // Reload chat list whenever screen comes into focus (fixes unread count bug)
+  useFocusEffect(
+    useCallback(() => {
+      loadData();
+    }, [])
+  );
 
+  useEffect(() => {
     // Subscribe to new messages to refresh chat list automatically
     const unsubscribe = onNewMessage((_message) => {
       loadData(); // Reload chat list when new message arrives
     });
 
-    return () => unsubscribe();
+    // Poll for new messages every 30 seconds (fallback if WebSocket misses messages)
+    // This is critical for receiving messages from NEW contacts
+    pollForNewMessages();
+    const pollInterval = setInterval(pollForNewMessages, 30000); // 30 seconds
+
+    return () => {
+      unsubscribe();
+      clearInterval(pollInterval);
+    };
   }, []);
 
   const loadData = async () => {
-    const [storedChats, storedUsername] = await Promise.all([
+    const [storedChats, storedUsername, keypair] = await Promise.all([
       getChats(),
       getStoredUsername(),
+      getStoredKeypair(),
     ]);
+
+    // Fetch user's groups from API and merge with local chats
+    if (keypair) {
+      try {
+        const myPubkey = uint8ToBase58(keypair.publicKey);
+        const { groups } = await getUserGroups(myPubkey);
+
+        // Add groups to chats if not already present
+        for (const group of groups) {
+          const existingGroup = storedChats.find(c => c.isGroup && c.groupId === group.groupId);
+          if (!existingGroup) {
+            const groupChat: Chat = {
+              isGroup: true,
+              groupId: group.groupId,
+              groupName: group.name,
+              participants: group.members,
+              unreadCount: 0,
+            };
+            await saveChat(groupChat);
+            storedChats.push(groupChat);
+          }
+        }
+      } catch (error) {
+        console.error('Failed to fetch groups:', error);
+      }
+    }
+
     setChats(storedChats);
     setUsername(storedUsername);
   };
@@ -52,6 +96,142 @@ export default function ChatsScreen() {
   const handleDeleteChat = async (chatUsername: string) => {
     await deleteChat(chatUsername);
     setChats(prev => prev.filter(c => c.username !== chatUsername));
+  };
+
+  /**
+   * Poll for new messages from ALL contacts (not just current chat)
+   * This ensures messages from new contacts show up even if WebSocket misses them
+   */
+  const pollForNewMessages = async () => {
+    try {
+      const keypair = await getStoredKeypair();
+      if (!keypair) return;
+
+      const myPubkey = uint8ToBase58(keypair.publicKey);
+
+      // Fetch messages from the last hour
+      const oneHourAgo = Math.floor(Date.now() / 1000) - 3600;
+      const { messages: inboxMessages } = await fetchInbox(myPubkey, oneHourAgo);
+
+      if (inboxMessages.length === 0) return;
+
+      const encryptionKeypair = getEncryptionKeypair(keypair);
+      let newMessagesFound = false;
+
+      for (const msg of inboxMessages) {
+        const alreadyProcessed = await isSignatureProcessed(msg.signature);
+        if (alreadyProcessed) continue;
+
+        if (msg.encryptedMessage.startsWith('group:')) {
+          const parts = msg.encryptedMessage.split(':');
+          if (parts.length === 3) {
+            const groupId = parts[1];
+
+            const storedChats = await getChats();
+            const groupChat = storedChats.find(c => c.isGroup && c.groupId === groupId);
+            if (groupChat) {
+              await saveChat({
+                ...groupChat,
+                lastMessage: 'New group message',
+                lastMessageTime: msg.timestamp * 1000,
+                unreadCount: (groupChat.unreadCount || 0) + 1,
+              });
+              newMessagesFound = true;
+            }
+          }
+
+          await addProcessedSignature(msg.signature);
+          continue;
+        }
+
+        const senderData = await getUsernameByOwner(msg.senderPubkey);
+        if (!senderData?.username || !senderData?.encryptionKey) {
+          await addProcessedSignature(msg.signature);
+          continue;
+        }
+
+        try {
+          const senderEncryptionKey = base64ToUint8(senderData.encryptionKey);
+          const decryptedText = decryptMessage(
+            msg.encryptedMessage,
+            senderEncryptionKey,
+            encryptionKeypair.secretKey
+          );
+
+          let finalContent = decryptedText;
+          if (finalContent.startsWith('ar:')) {
+            const arweaveTxId = finalContent.substring(3);
+            try {
+              const arweaveResponse = await fetch(`https://devnet.irys.xyz/${arweaveTxId}`);
+              if (arweaveResponse.ok) {
+                finalContent = await arweaveResponse.text();
+              }
+            } catch {
+              finalContent = 'Error: Arweave content unavailable';
+            }
+          }
+
+          let type: 'text' | 'image' = 'text';
+          let mimeType: string | undefined;
+          let width: number | undefined;
+          let height: number | undefined;
+
+          if (finalContent.startsWith('IMG:')) {
+            type = 'image';
+            const parts = finalContent.substring(4).split(':');
+
+            if (parts.length === 4) {
+              mimeType = parts[0];
+              width = parseInt(parts[1], 10);
+              height = parseInt(parts[2], 10);
+              finalContent = parts[3];
+            } else {
+              finalContent = finalContent.substring(4);
+              mimeType = 'image/jpeg';
+            }
+          }
+
+          const newMessage = {
+            id: generateMessageId(),
+            chatId: senderData.username,
+            type,
+            content: finalContent,
+            mimeType,
+            width,
+            height,
+            timestamp: msg.timestamp * 1000,
+            isMine: false,
+            status: 'confirmed' as const,
+            txSignature: msg.signature,
+          };
+
+          await saveMessage(newMessage);
+          await addProcessedSignature(msg.signature);
+
+          await saveChat({
+            username: senderData.username,
+            publicKey: msg.senderPubkey,
+            isGroup: false,
+            lastMessage: type === 'image' ? '📷 Photo' : finalContent,
+            lastMessageTime: msg.timestamp * 1000,
+            unreadCount: 1,
+          });
+
+          newMessagesFound = true;
+          console.log(`📩 Global poll: New message from @${senderData.username}`);
+        } catch (decryptError) {
+          await addProcessedSignature(msg.signature);
+          console.log('Failed to decrypt message during global poll:', decryptError);
+        }
+      }
+
+      if (newMessagesFound) {
+        await loadData();
+      }
+    } catch (error) {
+      console.error('Global message poll failed:', error);
+      // Don't show error to user - this is a background operation
+    }
   };
 
   return (
@@ -87,11 +267,17 @@ export default function ChatsScreen() {
       ) : (
         <FlatList
           data={chats}
-          keyExtractor={(item) => item.username}
+          keyExtractor={(item) => item.isGroup ? item.groupId! : item.username!}
           renderItem={({ item }) => (
             <ChatListItem
               chat={item}
-              onDelete={() => handleDeleteChat(item.username)}
+              onDelete={() => {
+                if (item.isGroup && item.groupId) {
+                  handleDeleteChat(item.groupId);
+                } else if (item.username) {
+                  handleDeleteChat(item.username);
+                }
+              }}
             />
           )}
           contentContainerStyle={styles.listContent}
@@ -105,19 +291,35 @@ export default function ChatsScreen() {
         />
       )}
 
-      {/* Floating New Chat Button */}
+      {/* Floating Action Buttons */}
       {chats.length > 0 && (
-        <Pressable
-          style={({ pressed }) => [
-            styles.fab,
-            pressed && styles.fabPressed,
-          ]}
-          onPress={() => router.push('/new-chat')}
-        >
-          <BlurView intensity={80} tint="dark" style={styles.fabBlur}>
-            <Ionicons name="add" size={28} color={Colors.text} />
-          </BlurView>
-        </Pressable>
+        <>
+          {/* New Chat Button */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.fab,
+              pressed && styles.fabPressed,
+            ]}
+            onPress={() => router.push('/new-chat')}
+          >
+            <BlurView intensity={80} tint="dark" style={styles.fabBlur}>
+              <Ionicons name="chatbubble" size={24} color={Colors.text} />
+            </BlurView>
+          </Pressable>
+
+          {/* New Group Button */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.fabSecondary,
+              pressed && styles.fabPressed,
+            ]}
+            onPress={() => router.push('/new-group')}
+          >
+            <BlurView intensity={80} tint="dark" style={styles.fabBlur}>
+              <Ionicons name="people" size={24} color={Colors.text} />
+            </BlurView>
+          </Pressable>
+        </>
       )}
     </View>
   );
@@ -270,6 +472,19 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.3,
     shadowRadius: 8,
   },
+  fabSecondary: {
+    position: 'absolute',
+    right: 20,
+    bottom: 180, // Above main FAB
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+  },
   fabPressed: {
     transform: [{ scale: 0.95 }],
   },
@@ -279,7 +494,5 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
     backgroundColor: Colors.primaryMuted,
-    borderWidth: 1,
-    borderColor: Colors.border,
   },
 });

@@ -1,5 +1,11 @@
 // MUST BE FIRST - Polyfill crypto.getRandomValues for tweetnacl
-import 'react-native-get-random-values';
+try {
+  require('react-native-get-random-values');
+} catch (error) {
+  console.error('CRITICAL: Failed to load react-native-get-random-values:', error);
+  // This is critical - without it, encryption will fail
+  // But don't crash the app - let it continue and fail gracefully later
+}
 
 import { Platform } from 'react-native';
 
@@ -73,6 +79,22 @@ import { Platform } from 'react-native';
       });
     }
   } catch (error) {
-    console.warn('Failed to install native shims', error);
+    console.error('Failed to install native shims:', error);
+    // Non-critical - app can continue without these shims
+    // The affected modules will just not be available
   }
 })();
+
+// Verify critical polyfills are working
+try {
+  if (typeof crypto === 'undefined' || !crypto.getRandomValues) {
+    console.error('CRITICAL: crypto.getRandomValues is not available - encryption will fail!');
+  } else {
+    // Test that it actually works
+    const testArray = new Uint8Array(1);
+    crypto.getRandomValues(testArray);
+    console.log('✅ crypto.getRandomValues polyfill is working');
+  }
+} catch (error) {
+  console.error('CRITICAL: crypto.getRandomValues test failed:', error);
+}

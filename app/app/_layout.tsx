@@ -5,7 +5,7 @@ import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
 import { Stack, useRouter, useSegments } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { View, Platform, Text, StyleSheet } from 'react-native';
 
 import { Colors } from '@/constants/Colors';
@@ -83,10 +83,28 @@ function RootLayoutNav() {
   const segments = useSegments();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [hasIdentity, setHasIdentity] = useState(false);
+  const prevSegments = useRef<string[]>([]);
 
+  // Check auth on mount
   useEffect(() => {
     checkAuth();
   }, []);
+
+  // Re-check auth when navigating FROM onboarding (catches post-registration)
+  // This ensures we pick up newly created credentials after onboarding completes
+  useEffect(() => {
+    const wasOnboarding = prevSegments.current[0] === 'onboarding';
+    const isOnboarding = segments[0] === 'onboarding';
+
+    // If we just left onboarding without identity, re-check auth
+    // This handles the case where user just completed registration
+    if (wasOnboarding && !isOnboarding && !hasIdentity && !isCheckingAuth) {
+      console.log('🔄 Re-checking auth after leaving onboarding (new registration)...');
+      checkAuth();
+    }
+
+    prevSegments.current = segments;
+  }, [segments, hasIdentity, isCheckingAuth]);
 
   useEffect(() => {
     if (isCheckingAuth) return;
@@ -116,10 +134,24 @@ function RootLayoutNav() {
   const checkAuth = async () => {
     try {
       console.log('🔍 Checking auth...');
-      const [keypair, cachedUsername] = await Promise.all([
-        getStoredKeypair(),
-        getStoredUsername(),
-      ]);
+
+      // Get stored credentials with defensive error handling
+      let keypair = null;
+      let cachedUsername = null;
+
+      try {
+        [keypair, cachedUsername] = await Promise.all([
+          getStoredKeypair(),
+          getStoredUsername(),
+        ]);
+      } catch (err) {
+        console.error('Failed to retrieve stored credentials:', err);
+        // If keychain access fails, treat as no identity
+        setHasIdentity(false);
+        setIsCheckingAuth(false);
+        return;
+      }
+
       console.log('🔑 Keypair found:', !!keypair);
       console.log('👤 Username found:', cachedUsername);
       let resolvedUsername = cachedUsername;
@@ -138,19 +170,25 @@ function RootLayoutNav() {
         }
       }
 
-      // Sync encryption key to API (in case server restarted and lost in-memory store)
+      // Initialize encryption and start services
       if (keypair && resolvedUsername) {
-        // Initialize storage encryption with the user's keypair
-        const { initStorageEncryption } = await import('@/lib/storage');
-        initStorageEncryption(keypair.secretKey);
-
-        // Encryption key sync removed (now stored on-chain)
+        try {
+          // Initialize storage encryption with the user's keypair
+          const { initStorageEncryption } = await import('@/lib/storage');
+          initStorageEncryption(keypair.secretKey);
+          console.log('✅ Storage encryption initialized');
+        } catch (err) {
+          console.error('Failed to initialize storage encryption:', err);
+          // Continue anyway - storage will fall back to unencrypted mode
+        }
 
         // Start WebSocket listener for incoming messages
         try {
           await startMessageListener();
+          console.log('✅ Message listener started');
         } catch (err) {
           console.warn('Failed to start message listener:', err);
+          // Non-critical - continue without real-time messages
         }
       }
 
@@ -167,6 +205,7 @@ function RootLayoutNav() {
       setHasIdentity(!!keypair && !!resolvedUsername);
     } catch (error) {
       console.error('Auth check failed:', error);
+      // On any unexpected error, treat as no identity to allow recovery
       setHasIdentity(false);
     } finally {
       setIsCheckingAuth(false);

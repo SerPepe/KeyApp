@@ -152,8 +152,16 @@ export default function OnboardingScreen() {
             setStep('success');
             haptic('success');
 
+            // On web, do a full reload to reset auth state
+            // On native, navigate normally (auth will be re-checked via focus listener)
             setTimeout(() => {
-                router.replace('/(tabs)');
+                if (Platform.OS === 'web') {
+                    // Full reload ensures auth state is fresh from localStorage
+                    console.log('🔄 Reloading page to refresh auth state...');
+                    window.location.href = '/';
+                } else {
+                    router.replace('/(tabs)');
+                }
             }, 1500);
         } catch (err) {
             console.error('Identity creation failed:', err);

@@ -27,6 +27,7 @@ import {
     generateMessageId,
     isSignatureProcessed,
     addProcessedSignature,
+    clearChatUnreadCount,
     type Message,
 } from '@/lib/storage';
 import { encryptMessage, getEncryptionKeypair, base64ToUint8, uint8ToBase58 } from '@/lib/crypto';
@@ -34,6 +35,7 @@ import { getStoredKeypair } from '@/lib/keychain';
 import { getPublicKeyByUsername } from '@/lib/api';
 import { type CompressedImage } from '@/lib/imageUtils';
 import { getUserSettings, type UserSettings } from '@/lib/settingsStorage';
+import { markRead } from '@/lib/receipts';
 import * as Haptics from 'expo-haptics';
 
 export default function ChatScreen() {
@@ -52,10 +54,14 @@ export default function ChatScreen() {
     const processedSignatures = useRef<Set<string>>(new Set());
 
     useEffect(() => {
+        // Clear unread count when opening chat
+        clearChatUnreadCount(username!);
+
         loadChat();
         loadUserSettings();
 
-        // Start polling for new messages every 5 seconds
+        // Poll immediately for real-time feel, then every 5 seconds
+        pollForMessages();
         const pollInterval = setInterval(() => {
             pollForMessages();
         }, 5000);
@@ -63,7 +69,16 @@ export default function ChatScreen() {
         return () => clearInterval(pollInterval);
     }, [username]);
 
-
+    // Mark messages as read when viewing chat
+    useEffect(() => {
+        messages.forEach(msg => {
+            if (!msg.isMine && msg.txSignature && msg.status === 'confirmed') {
+                markRead(msg.txSignature).catch(err =>
+                    console.log('Failed to send read receipt:', err)
+                );
+            }
+        });
+    }, [messages]);
 
     const loadChat = async () => {
         const storedMessages = await getMessages(username!);
@@ -172,11 +187,28 @@ export default function ChatScreen() {
                         }
                     }
 
-                    // 2. Determine message type based on content prefix
+                    // 2. Determine message type and parse image metadata
                     let type: 'text' | 'image' = 'text';
+                    let mimeType: string | undefined;
+                    let width: number | undefined;
+                    let height: number | undefined;
+
                     if (finalContent.startsWith('IMG:')) {
                         type = 'image';
-                        finalContent = finalContent.substring(4); // Remove 'IMG:'
+                        // New format: IMG:{mimeType}:{width}:{height}:{base64}
+                        const parts = finalContent.substring(4).split(':');
+
+                        if (parts.length === 4) {
+                            // New format with metadata
+                            mimeType = parts[0];
+                            width = parseInt(parts[1], 10);
+                            height = parseInt(parts[2], 10);
+                            finalContent = parts[3];
+                        } else {
+                            // Old format (backward compatibility): IMG:{base64}
+                            finalContent = finalContent.substring(4);
+                            mimeType = 'image/jpeg'; // Default
+                        }
                     }
 
                     console.log(`📩 Received ${type}:`, type === 'text' ? finalContent.slice(0, 20) : '(Image Data)');
@@ -186,6 +218,9 @@ export default function ChatScreen() {
                         chatId: username!,
                         type,
                         content: finalContent,
+                        mimeType,
+                        width,
+                        height,
                         timestamp: msg.timestamp * 1000,
                         isMine: false,
                         status: 'confirmed',
@@ -254,9 +289,10 @@ export default function ChatScreen() {
 
             const encryptionKeypair = getEncryptionKeypair(keypair);
 
-            // Encrypt the base64 image data (with IMG: prefix)
+            // Encrypt the base64 image data (with IMG: prefix and metadata)
+            // Format: IMG:{mimeType}:{width}:{height}:{base64}
             const encryptedImage = encryptMessage(
-                `IMG:${image.base64}`,
+                `IMG:${image.mimeType}:${image.width}:${image.height}:${image.base64}`,
                 recipientPublicKey,
                 encryptionKeypair.secretKey
             );

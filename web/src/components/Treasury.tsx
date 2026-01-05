@@ -1,31 +1,8 @@
 "use client"
 
 import { motion } from "framer-motion"
-import { Copy, Check } from "lucide-react"
-import { useState } from "react"
 
 export default function Treasury() {
-    const [copied, setCopied] = useState(false)
-    const address = "6V1AyUweJhZTNqZFHMFZKFxgDEBZhQSTqGjTkRJ3d2jQ"
-
-    const handleCopy = () => {
-        navigator.clipboard.writeText(address)
-        setCopied(true)
-        setTimeout(() => setCopied(false), 2000)
-
-        // Quill scratch sound logic
-        try {
-            const audio = new Audio("/quill-scratch.mp3")
-            audio.play().catch(() => {
-                // Most browsers block auto-play without user interaction, 
-                // but here it is a user interaction (click).
-                // Silent fail if file missing.
-            })
-        } catch (e) {
-            // Audio not supported or other error
-        }
-    }
-
     return (
         <section className="treasury-section">
             <div className="treasury-content">

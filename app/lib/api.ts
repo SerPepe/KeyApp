@@ -566,3 +566,187 @@ export async function deleteAvatar(username: string): Promise<{ success: boolean
 
     return response.json();
 }
+
+// ==================== GROUP API ====================
+
+export interface GroupInfo {
+    groupId: string;
+    name: string;
+    owner: string;
+    createdAt: number;
+    members: string[];
+}
+
+/**
+ * Create a new group
+ */
+export async function createGroup(name: string, ownerPubkey: string): Promise<{ success: boolean; groupId: string; name: string }> {
+    const keypair = await getStoredKeypair();
+    if (!keypair) {
+        throw new Error('No identity keypair found');
+    }
+
+    const timestamp = Date.now();
+    const messageToSign = `group:create:${name}:${timestamp}`;
+    const signature = uint8ToBase64(signMessage(new TextEncoder().encode(messageToSign), keypair.secretKey));
+
+    const response = await fetch(`${API_BASE_URL}/api/groups/create`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            name,
+            ownerPubkey,
+            signature,
+            timestamp
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to create group');
+    }
+
+    return response.json();
+}
+
+/**
+ * Invite a member to a group
+ */
+export async function inviteToGroup(groupId: string, memberPubkey: string, ownerPubkey: string): Promise<{ success: boolean }> {
+    const keypair = await getStoredKeypair();
+    if (!keypair) {
+        throw new Error('No identity keypair found');
+    }
+
+    const timestamp = Date.now();
+    const messageToSign = `group:invite:${groupId}:${memberPubkey}:${timestamp}`;
+    const signature = uint8ToBase64(signMessage(new TextEncoder().encode(messageToSign), keypair.secretKey));
+
+    const response = await fetch(`${API_BASE_URL}/api/groups/invite`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            groupId,
+            memberPubkey,
+            ownerPubkey,
+            signature,
+            timestamp
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to invite member');
+    }
+
+    return response.json();
+}
+
+/**
+ * Leave a group
+ */
+export async function leaveGroup(groupId: string, userPubkey: string): Promise<{ success: boolean }> {
+    const keypair = await getStoredKeypair();
+    if (!keypair) {
+        throw new Error('No identity keypair found');
+    }
+
+    const timestamp = Date.now();
+    const messageToSign = `group:leave:${groupId}:${timestamp}`;
+    const signature = uint8ToBase64(signMessage(new TextEncoder().encode(messageToSign), keypair.secretKey));
+
+    const response = await fetch(`${API_BASE_URL}/api/groups/leave`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            groupId,
+            ownerPubkey: userPubkey,
+            signature,
+            timestamp
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to leave group');
+    }
+
+    return response.json();
+}
+
+/**
+ * Get group information
+ */
+export async function getGroupInfo(groupId: string): Promise<GroupInfo> {
+    const response = await fetch(`${API_BASE_URL}/api/groups/${groupId}`);
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to get group info');
+    }
+
+    return response.json();
+}
+
+/**
+ * Get all groups for a user
+ */
+export async function getUserGroups(pubkey: string): Promise<{ groups: GroupInfo[] }> {
+    const response = await fetch(`${API_BASE_URL}/api/groups/user/${pubkey}`);
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || 'Failed to get user groups');
+    }
+
+    return response.json();
+}
+
+/**
+ * Send a group message
+ */
+export async function sendGroupMessage(
+    groupId: string,
+    encryptedMessage: string,
+    encryptedKeys: { [pubkey: string]: string },
+    senderPubkey: string
+): Promise<{ success: boolean; arweaveTxId: string }> {
+    const keypair = await getStoredKeypair();
+    if (!keypair) {
+        throw new Error('No identity keypair found');
+    }
+
+    const timestamp = Date.now();
+    const messageToSign = `group-msg:${groupId}:${encryptedMessage}:${timestamp}`;
+    const signature = uint8ToBase64(signMessage(new TextEncoder().encode(messageToSign), keypair.secretKey));
+
+    const response = await fetch(`${API_BASE_URL}/api/message/group/${groupId}/send`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            encryptedMessage,
+            encryptedKeys,
+            senderPubkey,
+            signature,
+            timestamp
+        }),
+    });
+
+    if (!response.ok) {
+        const text = await response.text();
+        try {
+            const error = JSON.parse(text);
+            throw new Error(error.error || `Failed to send group message (${response.status})`);
+        } catch (e) {
+            // Server returned HTML error page instead of JSON
+            throw new Error(`Server error (${response.status}): ${text.slice(0, 100)}`);
+        }
+    }
+
+    const text = await response.text();
+    try {
+        return JSON.parse(text);
+    } catch (e) {
+        throw new Error(`Invalid JSON response: ${text.slice(0, 100)}`);
+    }
+}

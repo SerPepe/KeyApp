@@ -40,7 +40,11 @@ export function ChatListItem({ chat, onDelete }: ChatListItemProps) {
     };
 
     const handlePress = () => {
-        router.push(`/chat/${chat.username}`);
+        if (chat.isGroup && chat.groupId) {
+            router.push(`/group/${chat.groupId}`);
+        } else if (chat.username) {
+            router.push(`/chat/${chat.username}`);
+        }
     };
 
     const toggleDelete = () => {
@@ -48,9 +52,10 @@ export function ChatListItem({ chat, onDelete }: ChatListItemProps) {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }
 
+        const chatName = chat.isGroup ? chat.groupName : `@${chat.username}`;
         Alert.alert(
             "Delete Chat",
-            `Are you sure you want to delete your chat with @${chat.username}? This cannot be undone.`,
+            `Are you sure you want to delete your chat with ${chatName}? This cannot be undone.`,
             [
                 {
                     text: "Cancel",
@@ -97,9 +102,19 @@ export function ChatListItem({ chat, onDelete }: ChatListItemProps) {
         );
     };
 
+    // Get display name and avatar content
+    const displayName = chat.isGroup ? chat.groupName! : `@${chat.username!}`;
+    const avatarContent = chat.isGroup ? (
+        <Ionicons name="people" size={24} color={Colors.background} />
+    ) : (
+        <Text style={styles.avatarText}>
+            {chat.username!.charAt(0).toUpperCase()}
+        </Text>
+    );
+
     // On web, we cannot use Swipeable easily without issues, so we just render content
     // Or we could add a delete button visible on hover/long press.
-    // For now we'll stick to mobile swipe. 
+    // For now we'll stick to mobile swipe.
     if (Platform.OS === 'web') {
         return (
             <Pressable
@@ -111,15 +126,13 @@ export function ChatListItem({ chat, onDelete }: ChatListItemProps) {
             >
                 {/* Avatar */}
                 <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                        {chat.username.charAt(0).toUpperCase()}
-                    </Text>
+                    {avatarContent}
                 </View>
 
                 {/* Content */}
                 <View style={styles.content}>
                     <View style={styles.row}>
-                        <Text style={styles.username}>@{chat.username}</Text>
+                        <Text style={styles.username}>{displayName}</Text>
                         <Text style={styles.time}>{formatTime(chat.lastMessageTime)}</Text>
                     </View>
                     <View style={styles.row}>
@@ -155,15 +168,13 @@ export function ChatListItem({ chat, onDelete }: ChatListItemProps) {
             >
                 {/* Avatar */}
                 <View style={styles.avatar}>
-                    <Text style={styles.avatarText}>
-                        {chat.username.charAt(0).toUpperCase()}
-                    </Text>
+                    {avatarContent}
                 </View>
 
                 {/* Content */}
                 <View style={styles.content}>
                     <View style={styles.row}>
-                        <Text style={styles.username}>@{chat.username}</Text>
+                        <Text style={styles.username}>{displayName}</Text>
                         <Text style={styles.time}>{formatTime(chat.lastMessageTime)}</Text>
                     </View>
                     <View style={styles.row}>
@@ -188,21 +199,23 @@ const styles = StyleSheet.create({
     container: {
         flexDirection: 'row',
         alignItems: 'center',
-        paddingVertical: 12,
+        paddingVertical: 16,
         paddingHorizontal: 16,
         backgroundColor: Colors.background,
+        borderBottomWidth: 0.5,
+        borderBottomColor: 'rgba(255, 255, 255, 0.06)',
     },
     pressed: {
-        backgroundColor: Colors.surface,
+        backgroundColor: 'rgba(255, 255, 255, 0.02)',
     },
     avatar: {
-        width: 52,
-        height: 52,
-        borderRadius: 26,
+        width: 54,
+        height: 54,
+        borderRadius: 27,
         backgroundColor: Colors.primary,
         alignItems: 'center',
         justifyContent: 'center',
-        marginRight: 12,
+        marginRight: 14,
     },
     avatarText: {
         fontSize: 20,
@@ -222,26 +235,29 @@ const styles = StyleSheet.create({
         fontSize: 16,
         fontWeight: '600',
         color: Colors.text,
+        letterSpacing: 0.2,
     },
     time: {
-        fontSize: 13,
-        color: Colors.textSecondary,
+        fontSize: 12,
+        color: Colors.textMuted,
+        opacity: 0.6,
     },
     lastMessage: {
         fontSize: 14,
         color: Colors.textSecondary,
         flex: 1,
-        marginTop: 2,
+        marginTop: 4,
         marginRight: 8,
+        opacity: 0.8,
     },
     badge: {
         backgroundColor: Colors.primary,
-        borderRadius: 12,
-        minWidth: 24,
-        height: 24,
+        borderRadius: 14,
+        minWidth: 26,
+        height: 26,
         alignItems: 'center',
         justifyContent: 'center',
-        paddingHorizontal: 6,
+        paddingHorizontal: 8,
     },
     badgeText: {
         fontSize: 12,

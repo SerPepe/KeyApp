@@ -67,8 +67,6 @@ const styles = StyleSheet.create({
         backgroundColor: Colors.primaryMuted,
         justifyContent: 'center',
         alignItems: 'center',
-        borderWidth: 1,
-        borderColor: 'rgba(201, 169, 98, 0.3)',
     },
     initials: {
         color: Colors.primary,

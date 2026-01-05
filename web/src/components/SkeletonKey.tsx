@@ -3,6 +3,7 @@
 import { motion } from "framer-motion"
 
 export default function SkeletonKey() {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const draw: any = {
         hidden: { pathLength: 0, opacity: 0 },
         visible: (i: number) => {

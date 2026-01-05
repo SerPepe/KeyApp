@@ -13,6 +13,13 @@ const eslintConfig = defineConfig([
     "build/**",
     "next-env.d.ts",
   ]),
+  {
+    rules: {
+      // Disable unescaped entities warnings (code blocks use quotes/apostrophes)
+      'react/no-unescaped-entities': 'off',
+      'react/jsx-no-comment-textnodes': 'off',
+    },
+  },
 ]);
 
 export default eslintConfig;

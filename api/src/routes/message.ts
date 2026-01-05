@@ -300,4 +300,107 @@ router.get('/inbox/:pubkey', async (req: Request, res: Response) => {
     }
 });
 
+/**
+ * POST /api/message/group/:groupId/send
+ * Send an encrypted message to a group
+ */
+router.post('/group/:groupId/send', rateLimitMiddleware, async (req: Request, res: Response) => {
+    try {
+        const { groupId } = req.params;
+        const {
+            encryptedMessage,
+            encryptedKeys,
+            senderPubkey,
+            signature,
+            timestamp,
+        } = req.body;
+
+        // Verify signature - must match frontend format
+        const messageToSign = `group-msg:${groupId}:${encryptedMessage}:${timestamp}`;
+        if (!verifySignature(signature, timestamp, messageToSign, senderPubkey)) {
+            return res.status(403).json({ error: 'Invalid signature' });
+        }
+
+        // Get group members from Redis
+        const redis = await import('../services/redis.js');
+        const members = await redis.getGroupMembers(groupId);
+
+        if (!members || members.length === 0) {
+            return res.status(404).json({ error: 'Group not found' });
+        }
+
+        // Verify sender is a member
+        if (!members.includes(senderPubkey)) {
+            return res.status(403).json({ error: 'Not a group member' });
+        }
+
+        // Store message on Arweave
+        const messageData = {
+            groupId,
+            senderPubkey,
+            encryptedMessage,
+            encryptedKeys,
+            timestamp,
+        };
+
+        const arweaveTxId = await uploadToArweave(JSON.stringify(messageData));
+
+        // Send notification transaction to each member
+        const feePayerKeypair = getFeePayer();
+
+        for (const memberPubkey of members) {
+            if (memberPubkey === senderPubkey) continue; // Skip sender
+
+            try {
+                const transaction = new Transaction();
+
+                // Add transfer to trigger listener
+                transaction.add(
+                    SystemProgram.transfer({
+                        fromPubkey: feePayerKeypair.publicKey,
+                        toPubkey: new PublicKey(memberPubkey),
+                        lamports: 1,
+                    })
+                );
+
+                // Add memo with group message reference
+                transaction.add(
+                    new TransactionInstruction({
+                        keys: [],
+                        programId: MEMO_PROGRAM_ID,
+                        data: Buffer.from(`group:${groupId}:${arweaveTxId}`),
+                    })
+                );
+
+                // Get recent blockhash
+                const { blockhash } = await connection.getLatestBlockhash();
+                transaction.recentBlockhash = blockhash;
+                transaction.feePayer = feePayerKeypair.publicKey;
+
+                // Sign and send
+                transaction.sign(feePayerKeypair);
+                const txSignature = await connection.sendRawTransaction(transaction.serialize());
+
+                console.log(`📨 Group message notification sent to ${memberPubkey.slice(0, 8)}: ${txSignature}`);
+            } catch (err) {
+                console.error(`Failed to notify member ${memberPubkey}:`, err);
+                // Continue to next member even if one fails
+            }
+        }
+
+        return res.json({
+            success: true,
+            arweaveTxId,
+            notifiedMembers: members.length - 1, // Exclude sender
+        });
+
+    } catch (error) {
+        console.error('❌ Group message send error:', error);
+        return res.status(500).json({
+            error: 'Send failed',
+            message: error instanceof Error ? error.message : 'Unknown error',
+        });
+    }
+});
+
 export default router;

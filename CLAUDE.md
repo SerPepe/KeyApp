@@ -62,7 +62,13 @@ cargo fmt && cargo clippy  # Format & lint Rust
 ### Encryption Model
 - **Signing**: Ed25519 for transaction signing
 - **Messaging**: X25519 Diffie-Hellman key exchange derived from signing keys
+  - X25519 keypair derived via `nacl.box.keyPair.fromSecretKey(signingKey.slice(0, 32))`
+  - Storage encryption uses same derivation for secretbox
 - **Message format**: Base64 encoded (nonce + encrypted payload)
+  - Nonce: 24 bytes (nacl.box.nonceLength)
+  - Combined format: `nonce + nacl.box(message, nonce, recipientPubKey, senderSecretKey)`
+  - Encoded to base64 for transmission
+- **Replay Protection**: 5-minute timestamp window (api/src/middleware/auth.ts:22-26)
 - Uses TweetNaCl library for all cryptographic operations
 
 ### Transaction Flow (Gasless)
@@ -77,6 +83,21 @@ cargo fmt && cargo clippy  # Format & lint Rust
 - WebSocket listener in `app/lib/websocket.ts` for incoming messages
 - Push notifications via Expo Notifications
 - Message deduplication and unread count tracking
+
+### Storage & State Management
+- **Encrypted Local Storage**: Chat/message data encrypted at rest using TweetNaCl secretbox (app/lib/storage.ts:41-75)
+  - Encryption key: First 32 bytes of Ed25519 signing secret key
+  - Format: `enc:{base64(nonce + encrypted_payload)}`
+  - Backwards compatible with unencrypted legacy data
+- **State Management**: No formal library (Zustand/Redux/Context)
+  - Component-level `useState` hooks
+  - Event callbacks for real-time updates
+  - Auth state managed in root layout (app/_layout.tsx)
+- **Keychain Storage**:
+  - iOS/Android: react-native-keychain with iCloud sync
+  - Web: localStorage (with security warnings)
+  - Stores: Ed25519 keypair + username
+- **Message Deduplication**: Last 1000 transaction signatures cached in AsyncStorage (app/lib/storage.ts:262-285)
 
 ## Key Files
 
@@ -124,6 +145,50 @@ UPSTASH_REDIS_REST_TOKEN=<token>
 
 ## Testing
 
-- **API**: Vitest for unit/integration tests; mock RPC calls for determinism
-- **Programs**: `anchor test` with deterministic keypairs
-- **Frontend**: React Testing Library for component tests
+### Current Infrastructure
+- **API**: Vitest configured with 1 test file (api/src/tests/auth.test.ts)
+  - Tests signature verification
+  - Command: `npm test` (in api/ directory)
+- **Programs**: ts-mocha configured in Anchor.toml but no test files present
+  - Command: `anchor test` (when tests are added)
+- **App**: No test framework configured (Jest/Vitest not set up)
+- **Web**: No test framework configured
+
+### Testing Conventions
+- Mock RPC calls for determinism in API tests
+- Use deterministic keypairs for Anchor program tests
+- Frontend testing: React Testing Library recommended (not yet configured)
+
+## Deployment & Infrastructure
+
+### Production Environments
+- **API**: Railway (railway.json config)
+  - URL: https://keyapp-production.up.railway.app
+  - Build: `npm run build && npm start`
+  - Restart policy: ON_FAILURE (max 10 retries)
+- **App**: Expo Application Services (EAS)
+  - Project ID: `b932b963-e6e6-4893-91b2-6426fe58d338`
+  - Build profiles: development, preview, production (eas.json)
+  - All profiles use production API URL
+- **Web**: Vercel (vercel.json config)
+  - SPA routing fallback to /index.html
+- **On-Chain**: Solana devnet (for development)
+  - Program address: `96hG67JxhNEptr1LkdtDcrqvtWiHH3x4GibDBcdh4MYQ`
+
+### CI/CD
+- No GitHub Actions workflows configured
+- Deployments via platform-specific mechanisms (Railway, EAS, Vercel)
+
+## Development Notes
+
+- **Monorepo Structure**: No root package.json - each workspace (app, web, api) is independent
+- **Linting**: Only Web package has ESLint configured (eslint.config.mjs)
+  - Web: `npm run lint` (Next.js + TypeScript rules)
+  - App/API: No linting configured
+  - Rust: Use `cargo fmt && cargo clippy` before commits
+- **Pre-commit Hooks**: Not configured (no husky/lint-staged)
+- **Platform-Specific Patterns**:
+  - Keychain falls back to localStorage on web
+  - Haptics conditionally applied (`Platform.OS !== 'web'`)
+  - WebSocket for real-time Solana account monitoring
+  - Recent refactor: IndexedDB removed in favor of localStorage
