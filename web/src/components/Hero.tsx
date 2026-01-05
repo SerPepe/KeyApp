@@ -43,7 +43,7 @@ export default function Hero() {
                     >
                         <div className="flex flex-row items-center gap-4">
                             <button onClick={() => setIsModalOpen(true)} className="btn">Try Key</button>
-                            <a href="https://jup.ag/swap/SOL-GAAhecJnJSUhdDwRsdVwAmYGGe4xWbjxe3mLKg9bBAGS" target="_blank" rel="noopener noreferrer" className="btn btn-secondary">Buy $KEY</a>
+                            <a href="https://app.meteora.ag/pools/FzLtymcFf2zz85ZVzwgJwNkVctFiqdT9WxGapmZVwoAP" target="_blank" rel="noopener noreferrer" className="btn btn-secondary">Buy $KEY</a>
                         </div>
 
                     </motion.div>
