@@ -362,12 +362,20 @@ export default function GroupChatScreen() {
                         </Pressable>
                     ),
                     headerRight: () => (
-                        <Pressable
-                            onPress={handleLeaveGroup}
-                            style={styles.headerButton}
-                        >
-                            <Ionicons name="exit-outline" size={22} color={Colors.error} />
-                        </Pressable>
+                        <View style={{ flexDirection: 'row', gap: 8 }}>
+                            <Pressable
+                                onPress={() => router.push(`/group-settings/${groupId}`)}
+                                style={styles.headerButton}
+                            >
+                                <Ionicons name="settings-outline" size={22} color={Colors.text} />
+                            </Pressable>
+                            <Pressable
+                                onPress={handleLeaveGroup}
+                                style={styles.headerButton}
+                            >
+                                <Ionicons name="exit-outline" size={22} color={Colors.error} />
+                            </Pressable>
+                        </View>
                     ),
                 }}
             />

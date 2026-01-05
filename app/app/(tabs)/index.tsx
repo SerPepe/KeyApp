@@ -319,6 +319,19 @@ export default function ChatsScreen() {
               <Ionicons name="people" size={24} color={Colors.text} />
             </BlurView>
           </Pressable>
+
+          {/* Search Groups Button */}
+          <Pressable
+            style={({ pressed }) => [
+              styles.fabTertiary,
+              pressed && styles.fabPressed,
+            ]}
+            onPress={() => router.push('/search-groups')}
+          >
+            <BlurView intensity={80} tint="dark" style={styles.fabBlur}>
+              <Ionicons name="search" size={24} color={Colors.text} />
+            </BlurView>
+          </Pressable>
         </>
       )}
     </View>
@@ -476,6 +489,19 @@ const styles = StyleSheet.create({
     position: 'absolute',
     right: 20,
     bottom: 180, // Above main FAB
+    width: 48,
+    height: 48,
+    borderRadius: 24,
+    overflow: 'hidden',
+    shadowColor: Colors.primary,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 6,
+  },
+  fabTertiary: {
+    position: 'absolute',
+    right: 20,
+    bottom: 240, // Above secondary FAB
     width: 48,
     height: 48,
     borderRadius: 24,
