@@ -190,7 +190,7 @@ export default function Whitepaper() {
                             Tokenomics
                         </h2>
                         <p className="leading-relaxed opacity-80 mb-6">
-                            The Key Protocol is sustained by the $KEY token launched on Bags.fm. Creator fees from $KEY trading
+                            The Key Protocol is sustained by the $KEY token launched on Pump.fun. Creator fees from $KEY trading
                             volume fund the fee-payer service, subsidizing all transaction costs for users.
                         </p>
                         <div className="p-6 bg-[rgba(212,175,55,0.03)] border border-[rgba(212,175,55,0.1)] rounded-lg">

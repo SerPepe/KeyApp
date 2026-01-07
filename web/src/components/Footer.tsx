@@ -31,8 +31,8 @@ export default function Footer() {
                 <Link href="/developers">Developers</Link>
                 <a href="https://github.com/SerPepe/KeyApp" target="_blank" rel="noopener noreferrer">Source Code</a>
                 <Link href="/privacy">Privacy Policy</Link>
-                <a href="https://dexscreener.com/solana/fzltymcff2zz85zvzwgjwnkvctfiqdt9wxgapmzvwoap" target="_blank" rel="noopener noreferrer">$KEY Chart</a>
-                <a href="https://x.com/i/communities/2007931518174507392" target="_blank" rel="noopener noreferrer">Twitter</a>
+                <a href="https://dexscreener.com" target="_blank" rel="noopener noreferrer">$KEY Chart</a>
+                <a href="https://x.com/" target="_blank" rel="noopener noreferrer">Twitter</a>
             </nav>
 
             <motion.div
