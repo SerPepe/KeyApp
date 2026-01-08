@@ -11,62 +11,57 @@ export default function Developers() {
     }
 
     return (
-        <div className="min-h-screen bg-[var(--canvas)] text-[var(--ink)] relative overflow-hidden">
-            {/* Background Gradient */}
-            <div className="fixed inset-0 bg-gradient-to-b from-transparent via-[rgba(0,127,255,0.02)] to-transparent pointer-events-none" />
+        <div className="developers-container">
+            <div className="bg-overlay" style={{ background: 'linear-gradient(to bottom, transparent, rgba(0,127,255,0.02), transparent)' }} />
 
-            {/* Header */}
-            <header className="fixed top-0 left-0 right-0 z-50 border-b border-white/5 backdrop-blur-xl">
-                <div className="max-w-[1400px] mx-auto px-8 py-6 flex justify-between items-center">
-                    <Link href="/" className="accent font-serif text-2xl tracking-widest no-underline">
+            <header className="fixed-header">
+                <div className="header-content">
+                    <Link href="/" className="accent font-serif" style={{ fontSize: '1.5rem', letterSpacing: '0.2em', textDecoration: 'none' }}>
                         KEY
                     </Link>
-                    <div className="flex gap-8 items-center">
-                        <Link href="/docs" className="opacity-60 hover:opacity-100 transition-opacity mono text-sm">
+                    <nav className="header-nav">
+                        <Link href="/docs" className="mono" style={{ fontSize: '0.875rem' }}>
                             Docs
                         </Link>
-                        <Link href="/whitepaper" className="opacity-60 hover:opacity-100 transition-opacity mono text-sm">
+                        <Link href="/whitepaper" className="mono" style={{ fontSize: '0.875rem' }}>
                             Whitepaper
                         </Link>
-                        <Link href="/" className="opacity-60 hover:opacity-100 transition-opacity mono text-sm">
+                        <Link href="/" className="mono" style={{ fontSize: '0.875rem' }}>
                             Home
                         </Link>
-                    </div>
+                    </nav>
                 </div>
             </header>
 
-            {/* Main Content */}
-            <main className="pt-32 pb-40 px-8">
-                <div className="max-w-[1200px] mx-auto">
+            <main className="main-content">
+                <div className="content-max-wide">
                     <motion.div initial="hidden" animate="visible" variants={fadeIn}>
-                        <p className="mono text-xs opacity-40 uppercase tracking-widest mb-4">Developer Portal</p>
-                        <h1 className="font-serif text-6xl mb-6 signal">Build on Key</h1>
-                        <p className="text-2xl opacity-60 font-serif italic mb-16">
+                        <p className="mono" style={{ fontSize: '0.75rem', opacity: 0.4, textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '1rem' }}>Developer Portal</p>
+                        <h1 className="font-serif" style={{ fontSize: '3.75rem', marginBottom: '1.5rem', color: 'var(--signal)' }}>Build on Key</h1>
+                        <p className="font-serif" style={{ fontSize: '1.5rem', opacity: 0.6, fontStyle: 'italic', marginBottom: '4rem' }}>
                             Open protocol, infinite possibilities
                         </p>
                     </motion.div>
 
                     {/* Quick Start */}
-                    <section className="mb-24">
-                        <h2 className="text-3xl font-serif italic mb-8 border-b border-[var(--signal)] pb-4 inline-block pr-12">
-                            Quick Start
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-                            <div className="p-8 bg-[rgba(0,127,255,0.03)] border border-[rgba(0,127,255,0.1)]">
-                                <h3 className="mono signal text-sm uppercase tracking-widest mb-4">Option 1: Use Key API</h3>
-                                <p className="text-sm opacity-80 mb-4">
+                    <section className="section-large">
+                        <h2 className="section-title" style={{ borderColor: 'var(--signal)' }}>Quick Start</h2>
+                        <div className="grid-2" style={{ marginBottom: '2rem' }}>
+                            <div className="card-signal">
+                                <h3 className="mono card-label-signal">Option 1: Use Key API</h3>
+                                <p style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: '1rem' }}>
                                     Quickest way to get started. Use our API for username registration, message sending, and inbox fetching.
                                 </p>
-                                <p className="mono text-xs opacity-60">
+                                <p className="mono" style={{ fontSize: '0.75rem', opacity: 0.6 }}>
                                     No blockchain knowledge required
                                 </p>
                             </div>
-                            <div className="p-8 bg-[rgba(212,175,55,0.03)] border border-[rgba(212,175,55,0.1)]">
-                                <h3 className="mono accent text-sm uppercase tracking-widest mb-4">Option 2: Direct Program Calls</h3>
-                                <p className="text-sm opacity-80 mb-4">
+                            <div className="card-accent">
+                                <h3 className="mono card-label">Option 2: Direct Program Calls</h3>
+                                <p style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: '1rem' }}>
                                     Maximum control. Call the Solana program directly, implement your own fee-payer, build custom infrastructure.
                                 </p>
-                                <p className="mono text-xs opacity-60">
+                                <p className="mono" style={{ fontSize: '0.75rem', opacity: 0.6 }}>
                                     Full customization, no dependencies
                                 </p>
                             </div>
@@ -74,189 +69,252 @@ export default function Developers() {
                     </section>
 
                     {/* API Reference */}
-                    <section className="mb-24">
-                        <h2 className="text-3xl font-serif italic mb-8 border-b border-[var(--signal)] pb-4 inline-block pr-12">
-                            API Reference
-                        </h2>
-                        <div className="space-y-8">
-                            <div className="p-6 bg-[rgba(255,255,255,0.02)] border border-white/5">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div>
-                                        <code className="mono text-sm accent">POST /api/username/register</code>
-                                        <p className="text-sm opacity-60 mt-2">Register a new username on-chain</p>
-                                    </div>
-                                </div>
-                                <div className="code-block text-xs">
-                                    <pre className="text-emerald-400">{`// Request Body`}</pre>
-                                    <pre className="text-white">&#123;</pre>
-                                    <pre className="text-blue-400">{`  "username": "alice",`}</pre>
-                                    <pre className="text-blue-400">{`  "publicKey": "Fkf3...base58",`}</pre>
-                                    <pre className="text-blue-400">{`  "encryptionKey": "Ab4d...base64",`}</pre>
-                                    <pre className="text-blue-400">{`  "signature": "YzNm...base64",`}</pre>
-                                    <pre className="text-blue-400">{`  "timestamp": 1704067200000`}</pre>
-                                    <pre className="text-white">&#125;</pre>
+                    <section className="section-large">
+                        <h2 className="section-title" style={{ borderColor: 'var(--signal)' }}>API Reference</h2>
+                        <div style={{ marginBottom: '2rem' }}>
+                            <p className="mono" style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '0.5rem' }}>Base URL:</p>
+                            <p className="api-url">https://api.trykey.app</p>
+                            <p className="mono" style={{ fontSize: '0.75rem', opacity: 0.6, marginTop: '1rem', marginBottom: '1rem' }}>
+                                All requests require the following headers:
+                            </p>
+                            <div className="code-block">
+                                <pre>Content-Type: application/json</pre>
+                                <pre>X-API-Key: YOUR_API_KEY</pre>
+                            </div>
+                        </div>
+
+                        <div className="api-box">
+                            <div className="api-endpoint">
+                                <div>
+                                    <code className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent)' }}>POST /api/username/register</code>
+                                    <p style={{ fontSize: '0.875rem', opacity: 0.6, marginTop: '0.5rem' }}>Register a new username on-chain</p>
                                 </div>
                             </div>
+                            <div className="code-block" style={{ fontSize: '0.75rem' }}>
+                                <pre className="text-emerald-400">// Request Body</pre>
+                                <pre>&#123;</pre>
+                                <pre>  "username": "alice",</pre>
+                                <pre>  "publicKey": "Fkf3...base58",</pre>
+                                <pre>  "encryptionKey": "Ab4d...base64",</pre>
+                                <pre>  "signature": "YzNm...base64",</pre>
+                                <pre>  "timestamp": 1704067200000</pre>
+                                <pre>&#125;</pre>
+                            </div>
+                        </div>
 
-                            <div className="p-6 bg-[rgba(255,255,255,0.02)] border border-white/5">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div>
-                                        <code className="mono text-sm accent">POST /api/message/send</code>
-                                        <p className="text-sm opacity-60 mt-2">Send encrypted message to recipient</p>
-                                    </div>
-                                </div>
-                                <div className="code-block text-xs">
-                                    <pre className="text-emerald-400">// Request Body</pre>
-                                    <pre className="text-white">&#123;</pre>
-                                    <pre className="text-blue-400">  "encryptedMessage": "base64_ciphertext",</pre>
-                                    <pre className="text-blue-400">  "recipientPubkey": "Fkf3...base58",</pre>
-                                    <pre className="text-blue-400">  "senderPubkey": "Ab4d...base58",</pre>
-                                    <pre className="text-blue-400">  "signature": "YzNm...base64",</pre>
-                                    <pre className="text-blue-400">  "timestamp": 1704067200000</pre>
-                                    <pre className="text-white">&#125;</pre>
+                        <div className="api-box">
+                            <div className="api-endpoint">
+                                <div>
+                                    <code className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent)' }}>POST /api/message/send</code>
+                                    <p style={{ fontSize: '0.875rem', opacity: 0.6, marginTop: '0.5rem' }}>Send encrypted message to recipient</p>
                                 </div>
                             </div>
+                            <div className="code-block" style={{ fontSize: '0.75rem' }}>
+                                <pre className="text-emerald-400">// Request Body</pre>
+                                <pre>&#123;</pre>
+                                <pre>  "encryptedMessage": "base64_ciphertext",</pre>
+                                <pre>  "recipientPubkey": "Fkf3...base58",</pre>
+                                <pre>  "senderPubkey": "Ab4d...base58",</pre>
+                                <pre>  "signature": "YzNm...base64",</pre>
+                                <pre>  "timestamp": 1704067200000</pre>
+                                <pre>&#125;</pre>
+                            </div>
+                        </div>
 
-                            <div className="p-6 bg-[rgba(255,255,255,0.02)] border border-white/5">
-                                <div className="flex items-start justify-between mb-4">
-                                    <div>
-                                        <code className="mono text-sm accent">GET /api/message/inbox/:pubkey</code>
-                                        <p className="text-sm opacity-60 mt-2">Fetch received messages</p>
-                                    </div>
+                        <div className="api-box">
+                            <div className="api-endpoint">
+                                <div>
+                                    <code className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent)' }}>GET /api/message/inbox/:pubkey</code>
+                                    <p style={{ fontSize: '0.875rem', opacity: 0.6, marginTop: '0.5rem' }}>Fetch received messages</p>
                                 </div>
-                                <div className="code-block text-xs">
-                                    <pre className="text-emerald-400">// Response</pre>
-                                    <pre className="text-white">&#123;</pre>
-                                    <pre className="text-blue-400">  "messages": [</pre>
-                                    <pre className="text-gray-400">    &#123;</pre>
-                                    <pre className="text-gray-400">      "signature": "tx_sig",</pre>
-                                    <pre className="text-gray-400">      "senderPubkey": "Fkf3...base58",</pre>
-                                    <pre className="text-gray-400">      "encryptedMessage": "base64_ciphertext",</pre>
-                                    <pre className="text-gray-400">      "timestamp": 1704067200</pre>
-                                    <pre className="text-gray-400">    &#125;</pre>
-                                    <pre className="text-blue-400">  ]</pre>
-                                    <pre className="text-white">&#125;</pre>
+                            </div>
+                            <div className="code-block" style={{ fontSize: '0.75rem' }}>
+                                <pre className="text-emerald-400">// Response</pre>
+                                <pre>&#123;</pre>
+                                <pre>  "messages": [</pre>
+                                <pre>    &#123;</pre>
+                                <pre>      "signature": "tx_sig",</pre>
+                                <pre>      "senderPubkey": "Fkf3...base58",</pre>
+                                <pre>      "encryptedMessage": "base64_ciphertext",</pre>
+                                <pre>      "timestamp": 1704067200</pre>
+                                <pre>    &#125;</pre>
+                                <pre>  ]</pre>
+                                <pre>&#125;</pre>
+                            </div>
+                        </div>
+
+                        <div className="api-box">
+                            <div className="api-endpoint">
+                                <div>
+                                    <code className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent)' }}>POST /api/groups/create</code>
+                                    <p style={{ fontSize: '0.875rem', opacity: 0.6, marginTop: '0.5rem' }}>Create a new group chat</p>
                                 </div>
+                            </div>
+                            <div className="code-block" style={{ fontSize: '0.75rem' }}>
+                                <pre className="text-emerald-400">// Request Body</pre>
+                                <pre>&#123;</pre>
+                                <pre>  "name": "My Group",</pre>
+                                <pre>  "maxMembers": 50,</pre>
+                                <pre>  "creatorPubkey": "Ab4d...base58",</pre>
+                                <pre>  "signature": "YzNm...base64",</pre>
+                                <pre>  "timestamp": 1704067200000</pre>
+                                <pre>&#125;</pre>
+                            </div>
+                        </div>
+
+                        <div className="api-box">
+                            <div className="api-endpoint">
+                                <div>
+                                    <code className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent)' }}>POST /api/message/group/:id/send</code>
+                                    <p style={{ fontSize: '0.875rem', opacity: 0.6, marginTop: '0.5rem' }}>Send encrypted message to group</p>
+                                </div>
+                            </div>
+                            <div className="code-block" style={{ fontSize: '0.75rem' }}>
+                                <pre className="text-emerald-400">// Request Body</pre>
+                                <pre>&#123;</pre>
+                                <pre>  "encryptedMessage": "base64_ciphertext",</pre>
+                                <pre>  "encryptedKeys": &#123;</pre>
+                                <pre>    "member1_pubkey": "encrypted_key_1",</pre>
+                                <pre>    "member2_pubkey": "encrypted_key_2"</pre>
+                                <pre>  &#125;,</pre>
+                                <pre>  "senderPubkey": "Ab4d...base58",</pre>
+                                <pre>  "signature": "YzNm...base64",</pre>
+                                <pre>  "timestamp": 1704067200000</pre>
+                                <pre>&#125;</pre>
                             </div>
                         </div>
                     </section>
 
-                    {/* Program IDL */}
-                    <section className="mb-24">
-                        <h2 className="text-3xl font-serif italic mb-8 border-b border-[var(--signal)] pb-4 inline-block pr-12">
-                            Program Interface (IDL)
-                        </h2>
-                        <div className="p-6 bg-[rgba(255,255,255,0.02)] border border-white/5 mb-6">
-                            <p className="mono text-xs opacity-60 mb-2">Program Address:</p>
-                            <code className="mono text-sm accent">96hG67JxhNEptr1LkdtDcrqvtWiHH3x4GibDBcdh4MYQ</code>
+                    {/* API Key */}
+                    <section className="section-large">
+                        <h2 className="section-title" style={{ borderColor: 'var(--signal)' }}>API Key</h2>
+                        <div className="card-accent" style={{ marginBottom: '1rem' }}>
+                            <p style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: '1rem' }}>
+                                To use the Key API, include your API key in the <code className="mono" style={{ color: 'var(--accent)' }}>X-API-Key</code> header.
+                            </p>
+                            <p className="mono" style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '0.5rem' }}>Request Example:</p>
+                            <div className="code-block" style={{ fontSize: '0.75rem' }}>
+                                <pre>fetch('https://api.trykey.app/api/message/inbox/PUBKEY', &#123;</pre>
+                                <pre>  headers: &#123;</pre>
+                                <pre>    'Content-Type': 'application/json',</pre>
+                                <pre>    'X-API-Key': 'your_api_key_here'</pre>
+                                <pre>  &#125;</pre>
+                                <pre>&#125;);</pre>
+                            </div>
                         </div>
-                        <div className="space-y-4">
-                            <div className="p-6 bg-[rgba(255,255,255,0.02)] border border-white/5">
-                                <h4 className="mono accent text-xs uppercase mb-3">registerUsername</h4>
-                                <p className="text-sm opacity-80 mb-3">Create a new username account (PDA derived from username)</p>
-                                <div className="code-block text-xs">
-                                    <pre className="text-blue-400">pub fn register_username(</pre>
-                                    <pre className="text-gray-400">  ctx: Context&lt;RegisterUsername&gt;,</pre>
-                                    <pre className="text-gray-400">  username: String,</pre>
-                                    <pre className="text-gray-400">  encryption_key: [u8; 32]</pre>
-                                    <pre className="text-blue-400">) -&gt; Result&lt;()&gt;</pre>
+                        <p className="mono" style={{ fontSize: '0.75rem', opacity: 0.8 }}>
+                            Contact us at <a href="mailto:dev@trykey.app" className="accent" style={{ textDecoration: 'none' }}>dev@trykey.app</a> to obtain your API key for production use.
+                        </p>
+                    </section>
+
+                    {/* Program IDL */}
+                    <section className="section-large">
+                        <h2 className="section-title" style={{ borderColor: 'var(--signal)' }}>Program Interface (IDL)</h2>
+                        <div className="card-white" style={{ marginBottom: '1.5rem' }}>
+                            <p className="mono" style={{ fontSize: '0.75rem', opacity: 0.6, marginBottom: '0.5rem' }}>Program Address:</p>
+                            <code className="mono" style={{ fontSize: '0.875rem', color: 'var(--accent)' }}>96hG67JxhNEptr1LkdtDcrqvtWiHH3x4GibDBcdh4MYQ</code>
+                        </div>
+                        <div style={{ marginBottom: '1rem' }}>
+                            <div className="card-white">
+                                <h4 className="mono card-label">registerUsername</h4>
+                                <p style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: '0.75rem' }}>Create a new username account (PDA derived from username)</p>
+                                <div className="code-block" style={{ fontSize: '0.75rem' }}>
+                                    <pre>pub fn register_username(</pre>
+                                    <pre>  ctx: Context&lt;RegisterUsername&gt;,</pre>
+                                    <pre>  username: String,</pre>
+                                    <pre>  encryption_key: [u8; 32]</pre>
+                                    <pre>) -&gt; Result&lt;()&gt;</pre>
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-[rgba(255,255,255,0.02)] border border-white/5">
-                                <h4 className="mono accent text-xs uppercase mb-3">updateEncryptionKey</h4>
-                                <p className="text-sm opacity-80 mb-3">Rotate encryption key (owner-only)</p>
-                                <div className="code-block text-xs">
-                                    <pre className="text-blue-400">pub fn update_encryption_key(</pre>
-                                    <pre className="text-gray-400">  ctx: Context&lt;UpdateEncryptionKey&gt;,</pre>
-                                    <pre className="text-gray-400">  new_key: [u8; 32]</pre>
-                                    <pre className="text-blue-400">) -&gt; Result&lt;()&gt;</pre>
+                            <div className="card-white">
+                                <h4 className="mono card-label">updateEncryptionKey</h4>
+                                <p style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: '0.75rem' }}>Rotate encryption key (owner-only)</p>
+                                <div className="code-block" style={{ fontSize: '0.75rem' }}>
+                                    <pre>pub fn update_encryption_key(</pre>
+                                    <pre>  ctx: Context&lt;UpdateEncryptionKey&gt;,</pre>
+                                    <pre>  new_key: [u8; 32]</pre>
+                                    <pre>) -&gt; Result&lt;()&gt;</pre>
                                 </div>
                             </div>
 
-                            <div className="p-6 bg-[rgba(255,255,255,0.02)] border border-white/5">
-                                <h4 className="mono accent text-xs uppercase mb-3">transferUsername</h4>
-                                <p className="text-sm opacity-80 mb-3">Transfer username to new owner</p>
-                                <div className="code-block text-xs">
-                                    <pre className="text-blue-400">pub fn transfer_username(</pre>
-                                    <pre className="text-gray-400">  ctx: Context&lt;TransferUsername&gt;,</pre>
-                                    <pre className="text-gray-400">  new_owner: Pubkey</pre>
-                                    <pre className="text-blue-400">) -&gt; Result&lt;()&gt;</pre>
+                            <div className="card-white">
+                                <h4 className="mono card-label">transferUsername</h4>
+                                <p style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: '0.75rem' }}>Transfer username to new owner</p>
+                                <div className="code-block" style={{ fontSize: '0.75rem' }}>
+                                    <pre>pub fn transfer_username(</pre>
+                                    <pre>  ctx: Context&lt;TransferUsername&gt;,</pre>
+                                    <pre>  new_owner: Pubkey</pre>
+                                    <pre>) -&gt; Result&lt;()&gt;</pre>
                                 </div>
                             </div>
                         </div>
                     </section>
 
                     {/* Code Examples */}
-                    <section className="mb-24">
-                        <h2 className="text-3xl font-serif italic mb-8 border-b border-[var(--signal)] pb-4 inline-block pr-12">
-                            Code Examples
-                        </h2>
-                        <div className="space-y-8">
-                            <div>
-                                <h3 className="mono accent text-sm uppercase tracking-widest mb-4">TypeScript (Client)</h3>
-                                <div className="code-block">
-                                    <pre className="text-emerald-400">// Encrypt a message with TweetNaCl</pre>
-                                    <pre className="text-white">import nacl from 'tweetnacl';</pre>
-                                    <pre className="text-white">import bs58 from 'bs58';</pre>
-                                    <pre className="text-blue-400"></pre>
-                                    <pre className="text-blue-400">const nonce = nacl.randomBytes(nacl.box.nonceLength);</pre>
-                                    <pre className="text-blue-400">const messageBytes = new TextEncoder().encode(message);</pre>
-                                    <pre className="text-blue-400">const encrypted = nacl.box(</pre>
-                                    <pre className="text-gray-400">  messageBytes,</pre>
-                                    <pre className="text-gray-400">  nonce,</pre>
-                                    <pre className="text-gray-400">  recipientPublicKey,</pre>
-                                    <pre className="text-gray-400">  senderSecretKey</pre>
-                                    <pre className="text-blue-400">);</pre>
-                                </div>
+                    <section className="section-large">
+                        <h2 className="section-title" style={{ borderColor: 'var(--signal)' }}>Code Examples</h2>
+                        <div style={{ marginBottom: '2rem' }}>
+                            <h3 className="mono" style={{ color: 'var(--accent)', fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '1rem' }}>TypeScript (Client)</h3>
+                            <div className="code-block">
+                                <pre className="text-emerald-400">// Encrypt a message with TweetNaCl</pre>
+                                <pre>import nacl from 'tweetnacl';</pre>
+                                <pre>import bs58 from 'bs58';</pre>
+                                <pre></pre>
+                                <pre>const nonce = nacl.randomBytes(nacl.box.nonceLength);</pre>
+                                <pre>const messageBytes = new TextEncoder().encode(message);</pre>
+                                <pre>const encrypted = nacl.box(</pre>
+                                <pre>  messageBytes,</pre>
+                                <pre>  nonce,</pre>
+                                <pre>  recipientPublicKey,</pre>
+                                <pre>  senderSecretKey</pre>
+                                <pre>);</pre>
                             </div>
+                        </div>
 
-                            <div>
-                                <h3 className="mono accent text-sm uppercase tracking-widest mb-4">Rust (Program)</h3>
-                                <div className="code-block">
-                                    <pre className="text-emerald-400">// Username account structure</pre>
-                                    <pre className="text-blue-400">#[account]</pre>
-                                    <pre className="text-white">pub struct UserAccount &#123;</pre>
-                                    <pre className="text-gray-400">    pub owner: Pubkey,</pre>
-                                    <pre className="text-gray-400">    pub username: String,</pre>
-                                    <pre className="text-gray-400">    pub encryption_key: [u8; 32],</pre>
-                                    <pre className="text-gray-400">    pub created_at: i64,</pre>
-                                    <pre className="text-gray-400">    pub bump: u8,</pre>
-                                    <pre className="text-white">&#125;</pre>
-                                </div>
+                        <div>
+                            <h3 className="mono" style={{ color: 'var(--accent)', fontSize: '0.875rem', textTransform: 'uppercase', letterSpacing: '0.15em', marginBottom: '1rem' }}>Rust (Program)</h3>
+                            <div className="code-block">
+                                <pre className="text-emerald-400">// Username account structure</pre>
+                                <pre>#[account]</pre>
+                                <pre>pub struct UserAccount &#123;</pre>
+                                <pre>    pub owner: Pubkey,</pre>
+                                <pre>    pub username: String,</pre>
+                                <pre>    pub encryption_key: [u8; 32],</pre>
+                                <pre>    pub created_at: i64,</pre>
+                                <pre>    pub bump: u8,</pre>
+                                <pre>&#125;</pre>
                             </div>
                         </div>
                     </section>
 
                     {/* SDKs & Libraries */}
-                    <section className="mb-24">
-                        <h2 className="text-3xl font-serif italic mb-8 border-b border-[var(--signal)] pb-4 inline-block pr-12">
-                            SDKs & Libraries
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-                            <div className="p-6 bg-[rgba(255,255,255,0.02)] border border-white/5">
-                                <h4 className="mono accent text-xs uppercase mb-3">JavaScript/TypeScript</h4>
-                                <ul className="space-y-2 text-sm opacity-80">
-                                    <li>• @solana/web3.js</li>
-                                    <li>• tweetnacl</li>
-                                    <li>• bs58</li>
+                    <section className="section-large">
+                        <h2 className="section-title" style={{ borderColor: 'var(--signal)' }}>SDKs & Libraries</h2>
+                        <div className="grid-3">
+                            <div className="card-white">
+                                <h4 className="mono card-label">JavaScript/TypeScript</h4>
+                                <ul className="list-no-style" style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+                                    <li style={{ marginBottom: '0.5rem' }}>• @solana/web3.js</li>
+                                    <li style={{ marginBottom: '0.5rem' }}>• tweetnacl</li>
+                                    <li style={{ marginBottom: '0.5rem' }}>• bs58</li>
                                     <li>• @coral-xyz/anchor</li>
                                 </ul>
                             </div>
-                            <div className="p-6 bg-[rgba(255,255,255,0.02)] border border-white/5">
-                                <h4 className="mono accent text-xs uppercase mb-3">Rust</h4>
-                                <ul className="space-y-2 text-sm opacity-80">
-                                    <li>• anchor-lang</li>
-                                    <li>• solana-program</li>
-                                    <li>• borsh</li>
+                            <div className="card-white">
+                                <h4 className="mono card-label">Rust</h4>
+                                <ul className="list-no-style" style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+                                    <li style={{ marginBottom: '0.5rem' }}>• anchor-lang</li>
+                                    <li style={{ marginBottom: '0.5rem' }}>• solana-program</li>
+                                    <li style={{ marginBottom: '0.5rem' }}>• borsh</li>
                                     <li>• ed25519-dalek</li>
                                 </ul>
                             </div>
-                            <div className="p-6 bg-[rgba(255,255,255,0.02)] border border-white/5">
-                                <h4 className="mono accent text-xs uppercase mb-3">Python</h4>
-                                <ul className="space-y-2 text-sm opacity-80">
-                                    <li>• solana-py</li>
-                                    <li>• PyNaCl</li>
+                            <div className="card-white">
+                                <h4 className="mono card-label">Python</h4>
+                                <ul className="list-no-style" style={{ fontSize: '0.875rem', opacity: 0.8 }}>
+                                    <li style={{ marginBottom: '0.5rem' }}>• solana-py</li>
+                                    <li style={{ marginBottom: '0.5rem' }}>• PyNaCl</li>
                                     <li>• base58</li>
                                 </ul>
                             </div>
@@ -264,29 +322,23 @@ export default function Developers() {
                     </section>
 
                     {/* Community */}
-                    <section className="mb-24">
-                        <h2 className="text-3xl font-serif italic mb-8 border-b border-[var(--signal)] pb-4 inline-block pr-12">
-                            Community
-                        </h2>
-                        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="p-8 bg-[rgba(0,127,255,0.03)] border border-[rgba(0,127,255,0.1)]">
-                                <h4 className="mono signal text-sm uppercase tracking-widest mb-4">GitHub</h4>
-                                <p className="text-sm opacity-80 mb-4">
+                    <section className="section-large">
+                        <h2 className="section-title" style={{ borderColor: 'var(--signal)' }}>Community</h2>
+                        <div className="grid-2">
+                            <a href="https://github.com/SerPepe/KeyApp" className="card-link" target="_blank" rel="noopener">
+                                <h4 className="mono card-label-signal">GitHub</h4>
+                                <p style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: '1rem' }}>
                                     Source code, issues, pull requests
                                 </p>
-                                <a href="https://github.com/SerPepe/KeyApp" className="mono text-xs signal hover:underline" target="_blank" rel="noopener">
-                                    github.com/SerPepe/KeyApp →
-                                </a>
-                            </div>
-                            <div className="p-8 bg-[rgba(212,175,55,0.03)] border border-[rgba(212,175,55,0.1)]">
-                                <h4 className="mono accent text-sm uppercase tracking-widest mb-4">Discord</h4>
-                                <p className="text-sm opacity-80 mb-4">
+                                <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--signal)' }}>github.com/SerPepe/KeyApp →</span>
+                            </a>
+                            <a href="https://discord.gg" className="card-link-gold" target="_blank" rel="noopener">
+                                <h4 className="mono card-label">Discord</h4>
+                                <p style={{ fontSize: '0.875rem', opacity: 0.8, marginBottom: '1rem' }}>
                                     Developer community, support, discussions
                                 </p>
-                                <a href="https://discord.gg" className="mono text-xs accent hover:underline" target="_blank" rel="noopener">
-                                    discord.gg/keyprotocol →
-                                </a>
-                            </div>
+                                <span className="mono" style={{ fontSize: '0.75rem', color: 'var(--accent)' }}>discord.gg/keyprotocol →</span>
+                            </a>
                         </div>
                     </section>
                 </div>

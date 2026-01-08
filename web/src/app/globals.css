@@ -609,3 +609,238 @@ blockquote {
 .hover-opacity:hover {
   opacity: 0.8 !important;
 }
+
+/* Whitepaper & Developers Page Styles */
+.whitepaper-container,
+.developers-container {
+  min-height: 100vh;
+  background-color: var(--canvas);
+  color: var(--ink);
+  position: relative;
+  overflow: hidden;
+}
+
+.bg-overlay {
+  position: fixed;
+  inset: 0;
+  background: linear-gradient(to bottom, transparent, rgba(212, 175, 55, 0.02), transparent);
+  pointer-events: none;
+}
+
+.fixed-header {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  z-index: 50;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(16px);
+}
+
+.header-content {
+  max-width: 1400px;
+  margin: 0 auto;
+  padding: 1.5rem 2rem;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.header-nav {
+  display: flex;
+  gap: 2rem;
+  align-items: center;
+}
+
+.header-nav a {
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+.header-nav a:hover {
+  opacity: 1;
+}
+
+.main-content {
+  padding-top: 8rem;
+  padding-bottom: 10rem;
+  padding-left: 2rem;
+  padding-right: 2rem;
+}
+
+.content-max {
+  max-width: 900px;
+  margin: 0 auto;
+}
+
+.content-max-wide {
+  max-width: 1200px;
+  margin: 0 auto;
+}
+
+.section-large {
+  margin-bottom: 6rem;
+}
+
+.section-title {
+  font-family: var(--font-cinzel), serif;
+  font-size: 1.875rem;
+  font-style: italic;
+  margin-bottom: 1.5rem;
+  border-bottom: 1px solid var(--accent);
+  padding-bottom: 1rem;
+  display: inline-block;
+  padding-right: 3rem;
+}
+
+.grid-3 {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.grid-2 {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+.card-accent {
+  padding: 1.5rem;
+  background: rgba(212, 175, 55, 0.03);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+}
+
+.card-red {
+  padding: 1.5rem;
+  background: rgba(255, 0, 0, 0.05);
+  border: 1px solid rgba(255, 0, 0, 0.1);
+}
+
+.card-green {
+  padding: 1.5rem;
+  background: rgba(0, 255, 0, 0.05);
+  border: 1px solid rgba(0, 255, 0, 0.1);
+}
+
+.card-signal {
+  padding: 1.5rem;
+  background: rgba(0, 127, 255, 0.03);
+  border: 1px solid rgba(0, 127, 255, 0.1);
+}
+
+.card-white {
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.card-label {
+  font-family: var(--font-mono), monospace;
+  color: var(--accent);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+.card-label-red {
+  font-family: var(--font-mono), monospace;
+  color: #ef4444;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+.card-label-green {
+  font-family: var(--font-mono), monospace;
+  color: #22c55e;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+.card-label-signal {
+  font-family: var(--font-mono), monospace;
+  color: var(--signal);
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  margin-bottom: 0.75rem;
+}
+
+.api-box {
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  margin-bottom: 0.5rem;
+}
+
+.api-endpoint {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+}
+
+.status-badge {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.65rem;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+}
+
+.api-url {
+  font-family: var(--font-mono), monospace;
+  font-size: 0.875rem;
+  color: var(--signal);
+  margin-top: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+ul.list-no-style {
+  list-style: none;
+  padding: 0;
+}
+
+ul.list-no-style li {
+  margin-bottom: 0.25rem;
+}
+
+.card-link {
+  display: block;
+  padding: 2rem;
+  background: rgba(0, 127, 255, 0.03);
+  border: 1px solid rgba(0, 127, 255, 0.1);
+  text-decoration: none;
+  color: inherit;
+}
+
+.card-link-gold {
+  display: block;
+  padding: 2rem;
+  background: rgba(212, 175, 55, 0.03);
+  border: 1px solid rgba(212, 175, 55, 0.1);
+  text-decoration: none;
+  color: inherit;
+}
+
+@media (max-width: 768px) {
+  .grid-3,
+  .grid-2 {
+    grid-template-columns: 1fr;
+  }
+
+  .header-content {
+    padding: 1rem 1.5rem;
+  }
+
+  .header-nav {
+    gap: 1.5rem;
+  }
+
+  .main-content {
+    padding-top: 6rem;
+    padding-left: 1rem;
+    padding-right: 1rem;
+  }
+}

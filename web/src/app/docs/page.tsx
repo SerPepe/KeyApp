@@ -394,7 +394,7 @@ export default function Docs() {
                                     <pre className="text-white">{`const encKeypair = nacl.box.keyPair.fromSecretKey(keypair.secretKey.slice(0, 32));`}</pre>
                                     <pre>&nbsp;</pre>
                                     <pre className="text-emerald-400">{`// Step 2: Register on-chain`}</pre>
-                                    <pre className="text-white">{`await fetch('https://keyapp-production.up.railway.app/api/username/register', {`}</pre>
+                                    <pre className="text-white">{`await fetch('https://api.trykey.app/api/username/register', {`}</pre>
                                     <pre className="text-gray-400">{`  method: 'POST',`}</pre>
                                     <pre className="text-gray-400">{`  headers: { 'Content-Type': 'application/json' },`}</pre>
                                     <pre className="text-gray-400">{`  body: JSON.stringify({`}</pre>
@@ -417,7 +417,7 @@ export default function Docs() {
                                     <pre className="text-white">{`const combined = new Uint8Array([...nonce, ...encrypted]);`}</pre>
                                     <pre>&nbsp;</pre>
                                     <pre className="text-emerald-400">{`// Send via API`}</pre>
-                                    <pre className="text-white">{`await fetch('https://keyapp-production.up.railway.app/api/message/send', {`}</pre>
+                                    <pre className="text-white">{`await fetch('https://api.trykey.app/api/message/send', {`}</pre>
                                     <pre className="text-gray-400">{`  method: 'POST',`}</pre>
                                     <pre className="text-gray-400">{`  body: JSON.stringify({`}</pre>
                                     <pre className="text-blue-400">{`    encryptedMessage: base64(combined),`}</pre>
@@ -447,7 +447,7 @@ export default function Docs() {
                                     <pre className="text-white">{`}`}</pre>
                                     <pre>&nbsp;</pre>
                                     <pre className="text-emerald-400">{`// Step 3: Send to group`}</pre>
-                                    <pre className="text-white">{`await fetch('https://keyapp-production.up.railway.app/api/message/group/GROUP_ID/send', {`}</pre>
+                                    <pre className="text-white">{`await fetch('https://api.trykey.app/api/message/group/GROUP_ID/send', {`}</pre>
                                     <pre className="text-gray-400">{`  method: 'POST',`}</pre>
                                     <pre className="text-gray-400">{`  body: JSON.stringify({`}</pre>
                                     <pre className="text-blue-400">{`    encryptedMessage: base64([...nonce, ...encrypted]),`}</pre>
