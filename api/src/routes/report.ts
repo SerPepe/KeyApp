@@ -89,8 +89,8 @@ router.get('/pending', async (req, res) => {
         const reports: ReportData[] = [];
 
         for (const key of keys) {
-            const data = await redis.get(key);
-            if (data && typeof data === 'string') {
+            const data = await redis.get<string>(key);
+            if (data) {
                 const parsed = JSON.parse(data) as ReportData;
                 if (parsed.status === 'pending') {
                     reports.push(parsed);
@@ -124,8 +124,8 @@ router.put('/:id/reviewed', async (req, res) => {
         const { action } = req.body; // 'block' or 'dismiss'
         const reportKey = `${REPORT_KEY_PREFIX}${req.params.id}`;
 
-        const data = await redis.get(reportKey);
-        if (!data || typeof data !== 'string') {
+        const data = await redis.get<string>(reportKey);
+        if (!data) {
             return res.status(404).json({
                 success: false,
                 message: 'Report not found'
