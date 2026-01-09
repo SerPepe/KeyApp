@@ -620,6 +620,19 @@ blockquote {
   overflow: hidden;
 }
 
+/* Privacy & Terms Page Layout Fixes */
+article {
+  text-align: left !important;
+}
+
+article .prose {
+  text-align: left !important;
+}
+
+article section {
+  text-align: left !important;
+}
+
 .bg-overlay {
   position: fixed;
   inset: 0;

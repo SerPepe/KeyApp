@@ -25,7 +25,8 @@ import { fetchConfig, releaseUsername, uploadAvatar, buildReleaseTransaction, ty
 import { type CompressedImage } from '@/lib/imageUtils';
 import { getUserSettings, saveUserSettings, CHAT_BACKGROUND_PRESETS, type UserSettings } from '@/lib/settingsStorage';
 
-const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+ const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
+ const isIPad = Platform.OS === 'ios' && Platform.isPad;
 
 export default function SettingsScreen() {
     const router = useRouter();
@@ -172,7 +173,7 @@ export default function SettingsScreen() {
                     onPress: async () => {
                         try {
                             // Release username first (adds .XX suffix like Signal)
-                            if (username) {
+                            if (username && username.trim()) {
                                 // 1. Get keys
                                 const keypair = await getStoredKeypair();
                                 if (!keypair) {
@@ -180,15 +181,17 @@ export default function SettingsScreen() {
                                 }
                                 const ownerPublicKey = uint8ToBase58(keypair.publicKey);
 
+                                console.log('🔥 Burning identity:', { username, ownerPublicKey });
+
                                 // 2. Build transaction (unsigned)
-                                const { transaction: unsignedTx } = await buildReleaseTransaction(username, ownerPublicKey);
+                                const { transaction: unsignedTx } = await buildReleaseTransaction(username.trim(), ownerPublicKey);
 
                                 // 3. Sign transaction
                                 const { signTransaction } = await import('@/lib/crypto');
                                 const signedTx = signTransaction(unsignedTx, keypair.secretKey);
 
                                 // 4. Submit signed transaction
-                                await releaseUsername(username, signedTx);
+                                await releaseUsername(username.trim(), signedTx);
                                 console.log(`🔄 Username @${username} released`);
                             }
                         } catch (err) {
@@ -202,7 +205,7 @@ export default function SettingsScreen() {
                         if (Platform.OS !== 'web') {
                             Haptics.notificationAsync(Haptics.NotificationFeedbackType.Success);
                         }
-                        router.replace('/onboarding');
+                        router.replace('/onboarding?bypass=true');
                     },
                 },
             ]
@@ -216,12 +219,18 @@ export default function SettingsScreen() {
                 <Text style={styles.watermark}>⚿</Text>
             </View>
 
-            {/* Glass Header - Compact */}
+             {/* Glass Header - Compact */}
             <BlurView intensity={20} tint="dark" style={styles.header}>
                 <Text style={styles.headerTitle}>Settings</Text>
             </BlurView>
 
-            <View style={styles.mainContent}>
+            <ScrollView
+                style={styles.scrollView}
+                contentContainerStyle={styles.scrollContent}
+                keyboardShouldPersistTaps="handled"
+                showsVerticalScrollIndicator={false}
+            >
+                <View style={styles.mainContent}>
                 {/* Identity Card - Compacted */}
                 <View style={[styles.card, styles.identityCard]}>
                     <View style={styles.cardHeader}>
@@ -418,9 +427,8 @@ export default function SettingsScreen() {
                         <Text style={styles.burnButtonText}>BURN IDENTITY</Text>
                     </Pressable>
                 </View>
-            </View>
-
-            {/* No scroll needed as everything fits */}
+                </View>
+            </ScrollView>
         </View>
     );
 }
@@ -483,16 +491,33 @@ const styles = StyleSheet.create({
         letterSpacing: 2,
         fontFamily: Platform.OS === 'ios' ? 'Georgia' : 'serif',
     },
-    mainContent: {
+    scrollView: {
         flex: 1,
-        paddingHorizontal: 20,
-        paddingTop: 16,
-        // Web: center content with max-width for better desktop experience
+        backgroundColor: Colors.background,
+    },
+    scrollContent: {
+        flexGrow: 1,
         ...(Platform.OS === 'web' ? {
             maxWidth: 500,
             alignSelf: 'center',
             width: '100%',
-        } : {}) as any,
+        } : isIPad ? {
+            maxWidth: 600,
+            alignSelf: 'center',
+            width: '100%',
+            paddingHorizontal: 32,
+        } : {}),
+    },
+    mainContent: {
+        flex: 1,
+        paddingTop: 16,
+        ...(Platform.OS === 'web' ? {
+            paddingHorizontal: 0,
+        } : isIPad ? {
+            paddingHorizontal: 0,
+        } : {
+            paddingHorizontal: 20,
+        }),
     },
     card: {
         backgroundColor: 'rgba(255, 255, 255, 0.03)',

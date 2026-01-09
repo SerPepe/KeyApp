@@ -35,24 +35,10 @@ export default function PrivacyPage() {
                                 <section className="engine-section !py-8 !border-0 !bg-transparent">
                                     <h2 className="text-2xl font-cinzel text-accent mb-4">1. Zero-Knowledge Architecture</h2>
                                     <p className="opacity-80 leading-relaxed">
-                                        ### 4. Styling & CSS Fixes
-                                        - **Modal Styling**: Converted Tailwind classes to plain CSS to ensure the modal is correctly styled in a non-Tailwind environment.
-                                        - **Open Key Web**: Fixed utility classes for the "Open Key Web" link (added `underline` and fixed `hover-opacity`).
-                                        - **Global CSS**: Added new utility classes (`.text-accent`, `.underline`, `.hover-opacity`) for consistent styling across components.
-
-                                        ## Verification Results
-
-                                        ### Build Status
-                                        The project builds successfully:
-                                        ```bash
-                                        ✓ Compiled successfully
-                                        ✓ Finished TypeScript
-                                        ✓ Generating static pages (6/6)
-                                        ```
-
-                                        ### Visual Verification
-                                        - **Modal**: Now correctly styled with the retro aesthetic, proper borders, and backdrop blur.
-                                        - **Open Key Web**: Correctly underlined and changes opacity on hover.
+                                        The Key Foundation operates on a principle of absolute sovereignty.
+                                        We believe that privacy is not a privilege, but a fundamental human right.
+                                        This document outlines our minimal data practices, designed solely to facilitate
+                                        encrypted communication without compromise.
                                     </p>
                                 </section>
 
@@ -73,8 +59,23 @@ export default function PrivacyPage() {
                                     <p className="opacity-80 leading-relaxed">
                                         Your data lives on your device. We provide no cloud backups of unencrypted data.
                                         If you lose your device and your seed phrase, your data is gone forever.
-                                        This is a feature, not a bug. It ensures that you are the sole custodian of your digital life.
+                                        This is a feature, not a bug. It ensures that you are sole custodian of your digital life.
                                     </p>
+                                </section>
+
+                                <section className="engine-section !py-8 !border-0 !bg-transparent">
+                                    <h2 className="text-2xl font-cinzel text-accent mb-4">4. Content Moderation & Safety</h2>
+                                    <p className="opacity-80 leading-relaxed">
+                                        Key is a peer-to-peer encrypted messaging protocol. Messages are stored on-chain and cannot be modified or deleted once confirmed.
+                                        However, we are committed to maintaining a safe environment.
+                                    </p>
+                                    <ul className="list-disc pl-6 space-y-2 mt-4 opacity-70 font-mono text-sm">
+                                        <li><strong>Zero Tolerance:</strong> Harassment, hate speech, explicit content, spam, illegal content is strictly prohibited</li>
+                                        <li><strong>Blocking:</strong> Users can block anyone at any time. Blocked users cannot send messages</li>
+                                        <li><strong>Reporting:</strong> Users can flag objectionable content. Reports are reviewed within 24 hours</li>
+                                        <li><strong>Consequences:</strong> Users violating our policies will be permanently blocked from protocol</li>
+                                        <li><strong>On-Chain Nature:</strong> Once messages are confirmed on Solana, they exist permanently on blockchain</li>
+                                    </ul>
                                 </section>
 
                                 <section className="engine-section !py-8 !border-0 !bg-transparent">
@@ -91,6 +92,16 @@ export default function PrivacyPage() {
                                     <p className="opacity-80 leading-relaxed">
                                         The Key Foundation may update this protocol document as our technology evolves.
                                         Immutable updates will be broadcasted via our official signed channels.
+                                    </p>
+                                </section>
+
+                                <section className="engine-section !py-8 !border-0 !bg-transparent">
+                                    <h2 className="text-2xl font-cinzel text-accent mb-4">6. Contact</h2>
+                                    <p className="opacity-80 leading-relaxed">
+                                        For questions or to report violations:
+                                    </p>
+                                    <p className="opacity-80 leading-relaxed mt-2">
+                                        <strong>Email:</strong> support@trykey.app
                                     </p>
                                 </section>
                             </div>

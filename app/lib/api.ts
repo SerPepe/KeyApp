@@ -496,18 +496,40 @@ export async function getBlockedUsers(pubkey: string): Promise<string[]> {
 }
 
 /**
- * Fetch large message content by ID
+ * Upload large message content by ID
  */
-export async function getMessageContent(id: string): Promise<string | null> {
-    try {
-        const response = await fetch(`${API_BASE_URL}/api/message/content/${id}`);
-        if (!response.ok) return null;
-        const data = await response.json();
-        return data.content || null;
-    } catch (error) {
-        console.error('Failed to fetch message content:', error);
-        return null;
+export async function fetchLargeMessage(id: string): Promise<string | null> {
+    const response = await fetch(`${API_BASE_URL}/api/message/blob/${id}`);
+    if (!response.ok) return null;
+    return await response.text();
+}
+
+/**
+ * Submit a content report
+ */
+export async function submitReport(
+    reporterPubkey: string,
+    reportedPubkey: string,
+    messageSignature: string,
+    reason: string
+): Promise<{ success: boolean; message: string; reportId?: string }> {
+    const response = await fetch(`${API_BASE_URL}/api/report`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            reporterPubkey,
+            reportedPubkey,
+            messageSignature,
+            reason,
+        }),
+    });
+
+    if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.message || 'Report submission failed');
     }
+
+    return response.json();
 }
 
 // ==================== PROFILE API ====================

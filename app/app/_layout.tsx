@@ -3,7 +3,7 @@ import '@/lib/nativeShims';
 import FontAwesome from '@expo/vector-icons/FontAwesome';
 import { DarkTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack, useRouter, useSegments } from 'expo-router';
+import { Stack, useRouter, useSegments, useLocalSearchParams } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect, useState, useRef } from 'react';
 import { View, Platform, Text, StyleSheet } from 'react-native';
@@ -81,9 +81,11 @@ export default function RootLayout() {
 function RootLayoutNav() {
   const router = useRouter();
   const segments = useSegments();
+  const query = useLocalSearchParams<{ bypass?: string }>();
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [hasIdentity, setHasIdentity] = useState(false);
   const prevSegments = useRef<string[]>([]);
+  const bypassCheckedRef = useRef(false);
 
   // Check auth on mount
   useEffect(() => {
@@ -110,13 +112,15 @@ function RootLayoutNav() {
     if (isCheckingAuth) return;
 
     const inOnboarding = segments[0] === 'onboarding';
+    const isBypass = query.bypass === 'true';
 
     if (!hasIdentity && !inOnboarding) {
-      // User has no identity and is not on onboarding - redirect
       router.replace('/onboarding');
-    } else if (hasIdentity && inOnboarding) {
-      // User has identity but is on onboarding - redirect to main app
+    } else if (hasIdentity && inOnboarding && !isBypass) {
       router.replace('/(tabs)');
+    } else if (isBypass && inOnboarding && !bypassCheckedRef.current) {
+      bypassCheckedRef.current = true;
+      checkAuth();
     }
   }, [isCheckingAuth, hasIdentity, segments]);
 
@@ -268,6 +272,10 @@ function RootLayoutNav() {
           <Stack.Screen
             name="modal"
             options={{ presentation: 'modal' }}
+          />
+          <Stack.Screen
+            name="tos-modal"
+            options={{ presentation: 'modal', headerShown: false }}
           />
         </Stack>
       </ThemeProvider>

@@ -20,6 +20,8 @@ import { onNewMessage } from '@/lib/websocket';
 import { fetchInbox, getUsernameByOwner, getUserGroups } from '@/lib/api';
 import { uint8ToBase58, base64ToUint8, getEncryptionKeypair, decryptMessage } from '@/lib/crypto';
 
+const isIPad = Platform.OS === 'ios' && Platform.isPad;
+
 export default function ChatsScreen() {
   const router = useRouter();
   const [chats, setChats] = useState<Chat[]>([]);
@@ -364,9 +366,27 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   listContent: {
-    paddingTop: 8,
-    paddingBottom: 120, // Space for floating tab bar
-  },
+        paddingVertical: 16,
+        paddingBottom: 8,
+        // Web: center content with max-width, iPad: responsive
+        ...(Platform.OS === 'web' ? {
+            maxWidth: 800,
+            alignSelf: 'center',
+            width: '100%',
+        } : isIPad ? {
+            maxWidth: 800,
+            alignSelf: 'center',
+            width: '100%',
+            paddingHorizontal: 32,
+        } : {}),
+    },
+    emptyContainer: {
+        flex: 1,
+        alignItems: 'center',
+        justifyContent: 'center',
+        paddingTop: 120,
+        paddingHorizontal: isIPad ? 48 : 40,
+    },
   chatItem: {
     flexDirection: 'row',
     alignItems: 'center',

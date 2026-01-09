@@ -1,5 +1,5 @@
 import React, { useRef } from 'react';
-import { View, Text, StyleSheet, Pressable, Image, Animated, Platform } from 'react-native';
+import { View, Text, StyleSheet, Pressable, Image, Animated, Platform, Alert } from 'react-native';
 import { Swipeable } from 'react-native-gesture-handler';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
@@ -22,6 +22,9 @@ export function MessageBubble({
     isLastInGroup,
     onReply,
     onDelete,
+    onReport,
+    messageSignature,
+    senderPublicKey,
 }: MessageBubbleProps) {
     const swipeableRef = useRef<Swipeable>(null);
 
@@ -49,7 +52,28 @@ export function MessageBubble({
         if (Platform.OS !== 'web') {
             Haptics.impactAsync(Haptics.ImpactFeedbackStyle.Medium);
         }
-        onReply?.();
+        
+        // Show options for own messages, add Report for others' messages
+        if (message.isMine) {
+            onReply?.();
+        } else {
+            Alert.alert(
+                'Message Options',
+                '',
+                [
+                    {
+                        text: 'Reply',
+                        onPress: () => onReply?.()
+                    },
+                    {
+                        text: 'Report',
+                        style: 'destructive',
+                        onPress: () => onReport?.()
+                    },
+                    { text: 'Cancel', style: 'cancel' }
+                ]
+            );
+        }
     };
 
     const handleDelete = async () => {

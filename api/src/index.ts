@@ -10,6 +10,7 @@ import blockRouter from './routes/block.js';
 import profileRouter from './routes/profile.js';
 import adminRouter from './routes/admin.js';
 import receiptsRouter from './routes/receipts.js';
+import reportRouter from './routes/report.js';
 
 const app = express();
 
@@ -75,6 +76,7 @@ app.use('/api/block', blockRouter);
 app.use('/api/profile', profileRouter);
 app.use('/api/admin', adminRouter);
 app.use('/api/receipt', receiptsRouter);
+app.use('/api/report', reportRouter);
 import contactsRouter from './routes/contacts.js';
 app.use('/api/contacts', contactsRouter);
 import groupsRouter from './routes/groups.js';

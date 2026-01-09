@@ -9,6 +9,7 @@ import {
     Platform,
     Dimensions,
     ActivityIndicator,
+    Linking,
 } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { useRouter } from 'expo-router';
@@ -19,10 +20,13 @@ import { uint8ToBase64, uint8ToBase58, getEncryptionPublicKey, signTransaction }
 import { buildUsernameTransaction, registerUsernameWithTransaction, checkUsernameAvailable } from '@/lib/api';
 
 const { width: SCREEN_WIDTH } = Dimensions.get('window');
+const isIPad = Platform.OS === 'ios' && Platform.isPad;
 
-// Responsive width - max 400px on web
+// Responsive width - max 400px on web, larger on iPad
 const MODAL_WIDTH = Platform.OS === 'web'
     ? Math.min(SCREEN_WIDTH - 48, 400)
+    : isIPad
+    ? Math.min(SCREEN_WIDTH - 64, 600)
     : SCREEN_WIDTH - 48;
 
 // Digital Renaissance color palette
@@ -37,7 +41,8 @@ export default function OnboardingScreen() {
     const [error, setError] = useState('');
     const [forgingProgress, setForgingProgress] = useState(0);
     const [isSubmitting, setIsSubmitting] = useState(false);
-
+    const [tosAccepted, setTosAccepted] = useState(false);
+    
     // Live username availability checking
     const [isCheckingAvailability, setIsCheckingAvailability] = useState(false);
     const [isUsernameAvailable, setIsUsernameAvailable] = useState<boolean | null>(null);
@@ -91,6 +96,10 @@ export default function OnboardingScreen() {
     const handleStartChat = () => {
         haptic('medium');
         setStep('username');
+    };
+
+    const handleTosPress = () => {
+        Linking.openURL('https://trykey.app/tos');
     };
 
     const handleUsernameSubmit = async () => {
@@ -209,23 +218,39 @@ export default function OnboardingScreen() {
                 <View style={styles.content}>
                     {/* Monochrome key icon */}
                     <View style={styles.keyIconContainer}>
-                        <Text style={styles.keyIcon}>⚿</Text>
-                    </View>
+                    <Text style={styles.keyIcon}>⚿</Text>
+                </View>
 
-                    <Text style={styles.title}>Key</Text>
-                    <Text style={styles.subtitle}>
-                        Private. Ephemeral. Onchain.
-                    </Text>
+                <Text style={styles.title}>Key</Text>
+                <Text style={styles.subtitle}>
+                    Private. Ephemeral. Onchain.
+                </Text>
 
                     <Pressable
                         style={({ pressed }) => [
                             styles.button,
+                            !tosAccepted && styles.buttonDisabled,
                             pressed && styles.buttonPressed,
                         ]}
                         onPress={handleStartChat}
+                        disabled={!tosAccepted}
                     >
                         <Text style={styles.buttonText}>Start Encrypted Chat</Text>
                     </Pressable>
+
+                <View style={styles.termsSection}>
+                    <Pressable onPress={() => setTosAccepted(!tosAccepted)} style={styles.checkboxContainer}>
+                        <View style={[styles.checkbox, tosAccepted && styles.checkboxChecked]}>
+                            {tosAccepted && <Text style={styles.checkmark}>✓</Text>}
+                        </View>
+                        <Text style={styles.termsLinkText}>
+                            I agree to{' '}
+                            <Text onPress={handleTosPress} style={styles.termsLink}>
+                                Terms of Service
+                            </Text>
+                        </Text>
+                    </Pressable>
+                </View>
                 </View>
             )}
 
@@ -364,10 +389,12 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 24,
         width: '100%',
-        // Web: center content with max-width for better desktop experience
+        // Web: center content with max-width, iPad: responsive
         ...(Platform.OS === 'web' ? {
             maxWidth: 500,
-        } : {}) as any,
+        } : isIPad ? {
+            maxWidth: 600,
+        } : {}),
     },
     title: {
         fontSize: 52,
@@ -419,6 +446,10 @@ const styles = StyleSheet.create({
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
         overflow: 'hidden',
+        ...(isIPad && {
+            maxWidth: 600,
+            width: '90%',
+        }),
     },
     formTitle: {
         fontSize: 24,
@@ -529,12 +560,49 @@ const styles = StyleSheet.create({
         backgroundColor: 'transparent',
     },
     availabilityText: {
-        fontSize: 14,
-        color: '#4CAF50',
-        textAlign: 'center',
-        marginBottom: 20,
-        marginTop: -10,
+        fontSize: 11,
+        letterSpacing: 2,
         fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
-        fontWeight: '500',
+    },
+    termsSection: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        justifyContent: 'center',
+        marginTop: 32,
+        marginBottom: 16,
+        gap: 8,
+    },
+    checkboxContainer: {
+        flexDirection: 'row',
+        alignItems: 'center',
+        gap: 10,
+    },
+    checkbox: {
+        width: 22,
+        height: 22,
+        borderRadius: 4,
+        borderWidth: 1.5,
+        borderColor: 'rgba(255, 255, 255, 0.5)',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: 'transparent',
+    },
+    checkboxChecked: {
+        backgroundColor: Colors.primary,
+        borderColor: Colors.primary,
+    },
+    checkmark: {
+        color: Colors.background,
+        fontSize: 14,
+        fontWeight: 'bold',
+        lineHeight: 18,
+    },
+    termsLink: {
+        textDecorationLine: 'underline',
+        opacity: 0.8,
+    },
+    termsLinkText: {
+        fontSize: 13,
+        color: '#FAFAFA',
     },
 });
