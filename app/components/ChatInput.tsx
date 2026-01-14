@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import {
     View,
     TextInput,
@@ -33,6 +33,17 @@ export function ChatInput({ onSend, onSendText, onSendImage, onEmojiPress, pendi
     const [isKeyboardVisible, setKeyboardVisible] = useState(false);
     const inputRef = useRef<TextInput>(null);
     const insets = useSafeAreaInsets();
+    
+    // Cache the initial bottom inset on mount to prevent layout jumping on Android edge-to-edge
+    // When keyboard appears on Android with edge-to-edge, insets.bottom can change dynamically
+    // causing visual glitches. Using a stable value prevents this.
+    const stableBottomInset = useMemo(() => {
+        if (Platform.OS === 'android') {
+            // On Android with edge-to-edge, use a fixed minimum to prevent layout jumping
+            return Math.max(insets.bottom, 16);
+        }
+        return insets.bottom;
+    }, []); // Empty deps - only calculate once on mount
 
     React.useEffect(() => {
         const keyboardWillShow = Keyboard.addListener(
@@ -140,11 +151,20 @@ export function ChatInput({ onSend, onSendText, onSendImage, onEmojiPress, pendi
     };
 
     const hasContent = text.trim().length > 0 || selectedImage !== null;
+    
+    // Calculate bottom padding - use stable value for Android to prevent layout jumps
+    const bottomPadding = isKeyboardVisible 
+        ? 8 
+        : Platform.OS === 'web' 
+            ? 16 
+            : Platform.OS === 'android'
+                ? stableBottomInset
+                : Math.max(insets.bottom, 20);
 
     return (
         <View style={[
             styles.container,
-            { paddingBottom: isKeyboardVisible ? 8 : (Platform.OS === 'web' ? 16 : Math.max(insets.bottom, 20)) }
+            { paddingBottom: bottomPadding }
         ]}>
             {/* Image Preview */}
             {selectedImage && (

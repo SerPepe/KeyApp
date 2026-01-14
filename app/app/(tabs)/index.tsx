@@ -19,11 +19,11 @@ import { ChatListItem } from '@/components/ChatListItem';
 import { onNewMessage } from '@/lib/websocket';
 import { fetchInbox, getUsernameByOwner, getUserGroups } from '@/lib/api';
 import { uint8ToBase58, base64ToUint8, getEncryptionKeypair, decryptMessage } from '@/lib/crypto';
-
-const isIPad = Platform.OS === 'ios' && Platform.isPad;
+import { useResponsive, getChatContainerStyle } from '@/hooks/useResponsive';
 
 export default function ChatsScreen() {
   const router = useRouter();
+  const responsive = useResponsive();
   const [chats, setChats] = useState<Chat[]>([]);
   const [refreshing, setRefreshing] = useState(false);
   const [username, setUsername] = useState<string | null>(null);
@@ -240,14 +240,16 @@ export default function ChatsScreen() {
     <View style={styles.container}>
       {/* Glass Header */}
       <BlurView intensity={60} tint="dark" style={styles.header}>
-        <Text style={styles.headerTitle}>Messages</Text>
-        {username && (
-          <Text style={styles.headerSubtitle}>@{username}</Text>
-        )}
+        <View style={[styles.headerContent, responsive.isLargeScreen && { maxWidth: responsive.chatMaxWidth, alignSelf: 'center', width: '100%' }]}>
+          <Text style={styles.headerTitle}>Messages</Text>
+          {username && (
+            <Text style={styles.headerSubtitle}>@{username}</Text>
+          )}
+        </View>
       </BlurView>
 
       {chats.length === 0 ? (
-        <View style={styles.emptyContainer}>
+        <View style={[styles.emptyContainer, responsive.isLargeScreen && { paddingHorizontal: responsive.horizontalPadding }]}>
           <View style={styles.emptyIcon}>
             <Ionicons name="chatbubbles-outline" size={64} color={Colors.textMuted} />
           </View>
@@ -282,7 +284,7 @@ export default function ChatsScreen() {
               }}
             />
           )}
-          contentContainerStyle={styles.listContent}
+          contentContainerStyle={[styles.listContent, getChatContainerStyle(responsive)]}
           refreshControl={
             <RefreshControl
               refreshing={refreshing}
@@ -301,6 +303,7 @@ export default function ChatsScreen() {
             style={({ pressed }) => [
               styles.fab,
               pressed && styles.fabPressed,
+              responsive.isLargeScreen && { right: Math.max(20, (responsive.screenWidth - responsive.chatMaxWidth) / 2 + 20) },
             ]}
             onPress={() => router.push('/new-chat')}
           >
@@ -314,6 +317,7 @@ export default function ChatsScreen() {
             style={({ pressed }) => [
               styles.fabSecondary,
               pressed && styles.fabPressed,
+              responsive.isLargeScreen && { right: Math.max(20, (responsive.screenWidth - responsive.chatMaxWidth) / 2 + 20) },
             ]}
             onPress={() => router.push('/new-group')}
           >
@@ -327,6 +331,7 @@ export default function ChatsScreen() {
             style={({ pressed }) => [
               styles.fabTertiary,
               pressed && styles.fabPressed,
+              responsive.isLargeScreen && { right: Math.max(20, (responsive.screenWidth - responsive.chatMaxWidth) / 2 + 20) },
             ]}
             onPress={() => router.push('/search-groups')}
           >
@@ -352,6 +357,9 @@ const styles = StyleSheet.create({
     borderBottomWidth: 1,
     borderBottomColor: Colors.border,
   },
+  headerContent: {
+    width: '100%',
+  },
   headerTitle: {
     fontSize: 28,
     fontWeight: '300',
@@ -366,27 +374,16 @@ const styles = StyleSheet.create({
     fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
   },
   listContent: {
-        paddingVertical: 16,
-        paddingBottom: 8,
-        // Web: center content with max-width, iPad: responsive
-        ...(Platform.OS === 'web' ? {
-            maxWidth: 800,
-            alignSelf: 'center',
-            width: '100%',
-        } : isIPad ? {
-            maxWidth: 800,
-            alignSelf: 'center',
-            width: '100%',
-            paddingHorizontal: 32,
-        } : {}),
-    },
-    emptyContainer: {
-        flex: 1,
-        alignItems: 'center',
-        justifyContent: 'center',
-        paddingTop: 120,
-        paddingHorizontal: isIPad ? 48 : 40,
-    },
+    paddingVertical: 16,
+    paddingBottom: 100,
+  },
+  emptyContainer: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'flex-start',
+    paddingTop: 120,
+    paddingHorizontal: 40,
+  },
   chatItem: {
     flexDirection: 'row',
     alignItems: 'center',
@@ -450,13 +447,6 @@ const styles = StyleSheet.create({
     fontSize: 12,
     fontWeight: '600',
     color: Colors.background,
-  },
-  emptyContainer: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'flex-start',
-    paddingTop: 120,
-    paddingHorizontal: 40,
   },
   emptyIcon: {
     marginBottom: 20,

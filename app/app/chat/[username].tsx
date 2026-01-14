@@ -38,10 +38,12 @@ import { getUserSettings, type UserSettings } from '@/lib/settingsStorage';
 import { markRead } from '@/lib/receipts';
 import * as Haptics from 'expo-haptics';
 import { ReportModal } from '@/components/ReportModal';
+import { useResponsive, getChatContainerStyle } from '@/hooks/useResponsive';
 
 export default function ChatScreen() {
     const { username } = useLocalSearchParams<{ username: string }>();
     const router = useRouter();
+    const responsive = useResponsive();
     const [messages, setMessages] = useState<Message[]>([]);
     const [recipientPublicKey, setRecipientPublicKey] = useState<Uint8Array | null>(null);
     const [recipientSolanaPubkey, setRecipientSolanaPubkey] = useState<string | null>(null);
@@ -55,7 +57,6 @@ export default function ChatScreen() {
     const [reportMessage, setReportMessage] = useState<{ signature: string; sender: string } | null>(null);
     const listRef = useRef<FlatList<Message>>(null);
     const processedSignatures = useRef<Set<string>>(new Set());
-    const isIPad = Platform.OS === 'ios' && Platform.isPad;
 
     useEffect(() => {
         clearChatUnreadCount(username!);
@@ -469,12 +470,10 @@ export default function ChatScreen() {
         );
     };
 
-    const chatStyles = getStyles(isIPad);
-
     return (
         <KeyboardAvoidingView
-            style={chatStyles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            style={styles.container}
+            behavior="padding"
             keyboardVerticalOffset={0}
         >
             {backgroundColor.startsWith('gradient:') ? (
@@ -527,23 +526,23 @@ export default function ChatScreen() {
                 data={messages}
                 keyExtractor={(item) => item.id}
                 renderItem={renderItem}
-                contentContainerStyle={chatStyles.messageList}
+                contentContainerStyle={[styles.messageList, getChatContainerStyle(responsive)]}
                 onContentSizeChange={() => {
                     listRef.current?.scrollToEnd({ animated: false });
                 }}
                 showsVerticalScrollIndicator={false}
             />
             {replyingTo && (
-                <View style={chatStyles.replyPreview}>
-                    <View style={chatStyles.replyBar} />
-                    <View style={chatStyles.replyContent}>
-                        <Text style={chatStyles.replyLabel}>Reply to</Text>
-                        <Text style={chatStyles.replyText} numberOfLines={1}>
+                <View style={styles.replyPreview}>
+                    <View style={styles.replyBar} />
+                    <View style={styles.replyContent}>
+                        <Text style={styles.replyLabel}>Reply to</Text>
+                        <Text style={styles.replyText} numberOfLines={1}>
                             {replyingTo.type === 'image' ? '📷 Photo' : replyingTo.content}
                         </Text>
                     </View>
                     <Text
-                        style={chatStyles.replyClear}
+                        style={styles.replyClear}
                         onPress={() => setReplyingTo(null)}
                     >
                         ✕
@@ -572,7 +571,7 @@ export default function ChatScreen() {
     );
 }
 
-const getStyles = (isIPad: boolean) => StyleSheet.create({
+const styles = StyleSheet.create({
     container: {
         flex: 1,
         backgroundColor: Colors.background,
@@ -580,16 +579,6 @@ const getStyles = (isIPad: boolean) => StyleSheet.create({
     messageList: {
         paddingVertical: 16,
         paddingBottom: 8,
-        ...(Platform.OS === 'web' ? {
-            maxWidth: 800,
-            alignSelf: 'center',
-            width: '100%',
-        } : isIPad ? {
-            maxWidth: 800,
-            alignSelf: 'center',
-            width: '100%',
-            paddingHorizontal: 32,
-        } : {}),
     },
     replyPreview: {
         flexDirection: 'row',

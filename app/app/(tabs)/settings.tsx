@@ -7,7 +7,6 @@ import {
     Alert,
     ScrollView,
     Platform,
-    Dimensions,
     Linking,
     Image,
 } from 'react-native';
@@ -24,12 +23,11 @@ import { uint8ToBase58 } from '@/lib/crypto';
 import { fetchConfig, releaseUsername, uploadAvatar, buildReleaseTransaction, type AppConfig } from '@/lib/api';
 import { type CompressedImage } from '@/lib/imageUtils';
 import { getUserSettings, saveUserSettings, CHAT_BACKGROUND_PRESETS, type UserSettings } from '@/lib/settingsStorage';
-
- const { width: SCREEN_WIDTH, height: SCREEN_HEIGHT } = Dimensions.get('window');
- const isIPad = Platform.OS === 'ios' && Platform.isPad;
+import { useResponsive, getContentContainerStyle } from '@/hooks/useResponsive';
 
 export default function SettingsScreen() {
     const router = useRouter();
+    const responsive = useResponsive();
     const [username, setUsername] = useState<string | null>(null);
     const [publicKey, setPublicKey] = useState<string | null>(null);
     const [appConfig, setAppConfig] = useState<AppConfig | null>(null);
@@ -221,12 +219,14 @@ export default function SettingsScreen() {
 
              {/* Glass Header - Compact */}
             <BlurView intensity={20} tint="dark" style={styles.header}>
-                <Text style={styles.headerTitle}>Settings</Text>
+                <View style={[styles.headerContent, responsive.isLargeScreen && { maxWidth: responsive.contentMaxWidth, alignSelf: 'center', width: '100%' }]}>
+                    <Text style={styles.headerTitle}>Settings</Text>
+                </View>
             </BlurView>
 
             <ScrollView
                 style={styles.scrollView}
-                contentContainerStyle={styles.scrollContent}
+                contentContainerStyle={[styles.scrollContent, getContentContainerStyle(responsive)]}
                 keyboardShouldPersistTaps="handled"
                 showsVerticalScrollIndicator={false}
             >
@@ -484,6 +484,9 @@ const styles = StyleSheet.create({
         borderBottomWidth: 1,
         borderBottomColor: Colors.border,
     },
+    headerContent: {
+        width: '100%',
+    },
     headerTitle: {
         fontSize: 28,
         fontWeight: '300',
@@ -497,27 +500,12 @@ const styles = StyleSheet.create({
     },
     scrollContent: {
         flexGrow: 1,
-        ...(Platform.OS === 'web' ? {
-            maxWidth: 500,
-            alignSelf: 'center',
-            width: '100%',
-        } : isIPad ? {
-            maxWidth: 600,
-            alignSelf: 'center',
-            width: '100%',
-            paddingHorizontal: 32,
-        } : {}),
+        paddingBottom: 100,
     },
     mainContent: {
         flex: 1,
         paddingTop: 16,
-        ...(Platform.OS === 'web' ? {
-            paddingHorizontal: 0,
-        } : isIPad ? {
-            paddingHorizontal: 0,
-        } : {
-            paddingHorizontal: 20,
-        }),
+        paddingHorizontal: 20,
     },
     card: {
         backgroundColor: 'rgba(255, 255, 255, 0.03)',

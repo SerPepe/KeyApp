@@ -7,6 +7,7 @@ import { Colors } from '@/constants/Colors';
 import { Message, deleteMessage } from '@/lib/storage';
 import { parseEmojis, customEmojis, hasCustomEmoji } from '@/lib/emojiRegistry';
 import { Avatar } from './Avatar';
+import { getResponsiveValues } from '@/hooks/useResponsive';
 
 interface MessageBubbleProps {
     message: Message;
@@ -14,6 +15,9 @@ interface MessageBubbleProps {
     isLastInGroup: boolean;
     onReply?: () => void;
     onDelete?: () => void;
+    onReport?: () => void;
+    messageSignature?: string;
+    senderPublicKey?: string | null;
 }
 
 export function MessageBubble({
@@ -27,6 +31,7 @@ export function MessageBubble({
     senderPublicKey,
 }: MessageBubbleProps) {
     const swipeableRef = useRef<Swipeable>(null);
+    const responsive = getResponsiveValues();
 
     const formatTime = (timestamp: number) => {
         const date = new Date(timestamp);
@@ -194,6 +199,7 @@ export function MessageBubble({
                         styles.bubble,
                         message.isMine ? styles.bubbleMine : styles.bubbleTheirs,
                         getBorderRadius(),
+                        { maxWidth: responsive.bubbleMaxWidth },
                     ]}
                 >
                     {renderContent()}
@@ -258,7 +264,6 @@ const styles = StyleSheet.create({
         marginVertical: 1,
     },
     bubble: {
-        maxWidth: 280,
         paddingHorizontal: 14,
         paddingVertical: 10,
     },

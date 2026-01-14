@@ -7,7 +7,6 @@ import {
     TextInput,
     KeyboardAvoidingView,
     Platform,
-    Dimensions,
     ActivityIndicator,
     Linking,
 } from 'react-native';
@@ -18,16 +17,7 @@ import { Colors } from '@/constants/Colors';
 import { createIdentity, storeUsername } from '@/lib/keychain';
 import { uint8ToBase64, uint8ToBase58, getEncryptionPublicKey, signTransaction } from '@/lib/crypto';
 import { buildUsernameTransaction, registerUsernameWithTransaction, checkUsernameAvailable } from '@/lib/api';
-
-const { width: SCREEN_WIDTH } = Dimensions.get('window');
-const isIPad = Platform.OS === 'ios' && Platform.isPad;
-
-// Responsive width - max 400px on web, larger on iPad
-const MODAL_WIDTH = Platform.OS === 'web'
-    ? Math.min(SCREEN_WIDTH - 48, 400)
-    : isIPad
-    ? Math.min(SCREEN_WIDTH - 64, 600)
-    : SCREEN_WIDTH - 48;
+import { useResponsive } from '@/hooks/useResponsive';
 
 // Digital Renaissance color palette
 const GOLD = '#C9A962';
@@ -36,6 +26,7 @@ const ICE_BLUE = '#4FC3F7';
 
 export default function OnboardingScreen() {
     const router = useRouter();
+    const responsive = useResponsive();
     const [step, setStep] = useState<'landing' | 'username' | 'forging' | 'success'>('landing');
     const [username, setUsername] = useState('');
     const [error, setError] = useState('');
@@ -205,7 +196,8 @@ export default function OnboardingScreen() {
     return (
         <KeyboardAvoidingView
             style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+            behavior="padding"
+            keyboardVerticalOffset={0}
         >
             {/* Subtle mesh gradient background */}
             <View style={styles.meshGradient}>
@@ -215,7 +207,7 @@ export default function OnboardingScreen() {
 
             {/* Landing Content */}
             {step === 'landing' && (
-                <View style={styles.content}>
+                <View style={[styles.content, { maxWidth: responsive.contentMaxWidth }]}>
                     {/* Monochrome key icon */}
                     <View style={styles.keyIconContainer}>
                     <Text style={styles.keyIcon}>⚿</Text>
@@ -256,8 +248,8 @@ export default function OnboardingScreen() {
 
             {/* Username Step - Frosted Glass Modal */}
             {step === 'username' && (
-                <View style={styles.content}>
-                    <BlurView intensity={40} tint="dark" style={styles.glassModal}>
+                <View style={[styles.content, { maxWidth: responsive.contentMaxWidth }]}>
+                    <BlurView intensity={40} tint="dark" style={[styles.glassModal, { width: responsive.modalMaxWidth }]}>
                         <Text style={styles.formTitle}>Who are you?</Text>
 
                         <View style={[
@@ -318,12 +310,12 @@ export default function OnboardingScreen() {
 
             {/* Forging Step */}
             {step === 'forging' && (
-                <View style={styles.content}>
-                    <BlurView intensity={40} tint="dark" style={styles.glassModal}>
+                <View style={[styles.content, { maxWidth: responsive.contentMaxWidth }]}>
+                    <BlurView intensity={40} tint="dark" style={[styles.glassModal, { width: responsive.modalMaxWidth }]}>
                         <Text style={styles.forgingTitle}>Forging 256-bit keys...</Text>
                         <Text style={styles.forgingSubtitle}>Creating your identity</Text>
 
-                        <View style={styles.progressContainer}>
+                        <View style={[styles.progressContainer, { width: Math.min(responsive.modalMaxWidth - 60, 300) }]}>
                             <View style={[styles.progressBar, { width: `${forgingProgress}%` }]} />
                         </View>
 
@@ -334,8 +326,8 @@ export default function OnboardingScreen() {
 
             {/* Success Step */}
             {step === 'success' && (
-                <View style={styles.content}>
-                    <BlurView intensity={40} tint="dark" style={styles.glassModal}>
+                <View style={[styles.content, { maxWidth: responsive.contentMaxWidth }]}>
+                    <BlurView intensity={40} tint="dark" style={[styles.glassModal, { width: responsive.modalMaxWidth }]}>
                         <Text style={styles.successIcon}>✓</Text>
                         <Text style={styles.successText}>Identity Created</Text>
                     </BlurView>
@@ -389,12 +381,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
         paddingHorizontal: 24,
         width: '100%',
-        // Web: center content with max-width, iPad: responsive
-        ...(Platform.OS === 'web' ? {
-            maxWidth: 500,
-        } : isIPad ? {
-            maxWidth: 600,
-        } : {}),
     },
     title: {
         fontSize: 52,
@@ -440,16 +426,11 @@ const styles = StyleSheet.create({
     glassModal: {
         borderRadius: 24,
         padding: 32,
-        width: MODAL_WIDTH,
-        maxWidth: 400,
+        maxWidth: 500,
         alignItems: 'center',
         borderWidth: 1,
         borderColor: 'rgba(255, 255, 255, 0.1)',
         overflow: 'hidden',
-        ...(isIPad && {
-            maxWidth: 600,
-            width: '90%',
-        }),
     },
     formTitle: {
         fontSize: 24,
@@ -514,7 +495,6 @@ const styles = StyleSheet.create({
         fontFamily: Platform.OS === 'ios' ? 'Menlo' : 'monospace',
     },
     progressContainer: {
-        width: SCREEN_WIDTH - 120,
         height: 4,
         backgroundColor: 'rgba(255, 255, 255, 0.1)',
         borderRadius: 2,

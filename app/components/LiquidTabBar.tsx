@@ -1,16 +1,10 @@
 import React from 'react';
-import { View, Pressable, StyleSheet, Dimensions, Platform } from 'react-native';
+import { View, Pressable, StyleSheet, Platform } from 'react-native';
 import { BlurView } from 'expo-blur';
 import { Ionicons } from '@expo/vector-icons';
 import * as Haptics from 'expo-haptics';
 import { Colors } from '@/constants/Colors';
-
-const windowWidth = Dimensions.get('window').width;
-// On web, use a fixed reasonable width; on mobile, scale with screen
-const TAB_WIDTH = Platform.OS === 'web'
-    ? Math.min(windowWidth * 0.55, 220)
-    : windowWidth * 0.55;
-const ITEM_WIDTH = TAB_WIDTH / 2;
+import { useResponsive } from '@/hooks/useResponsive';
 
 interface TabBarProps {
     state: any;
@@ -19,14 +13,22 @@ interface TabBarProps {
 }
 
 export function LiquidTabBar({ state, descriptors, navigation }: TabBarProps) {
+    const responsive = useResponsive();
+    const TAB_WIDTH = responsive.tabBarWidth;
+    const ITEM_WIDTH = TAB_WIDTH / 2;
+
     return (
-        <View style={styles.container}>
-            <BlurView intensity={30} tint="dark" style={styles.glassPill}>
+        <View style={[styles.container, { width: responsive.screenWidth }]}>
+            <BlurView intensity={30} tint="dark" style={[styles.glassPill, { width: TAB_WIDTH }]}>
                 {/* The "Lamp Glow" effect behind the icons */}
                 <View
                     style={[
                         styles.activeIndicator,
-                        { transform: [{ translateX: state.index * ITEM_WIDTH }] }
+                        { 
+                            transform: [{ translateX: state.index * ITEM_WIDTH }],
+                            width: ITEM_WIDTH * 0.8,
+                            left: ITEM_WIDTH * 0.1,
+                        }
                     ]}
                 />
 
@@ -57,7 +59,7 @@ export function LiquidTabBar({ state, descriptors, navigation }: TabBarProps) {
                             <Pressable
                                 key={index}
                                 onPress={onPress}
-                                style={styles.tabItem}
+                                style={[styles.tabItem, { width: ITEM_WIDTH }]}
                                 hitSlop={10}
                             >
                                 <View style={[
@@ -84,16 +86,13 @@ const styles = StyleSheet.create({
     container: {
         position: 'absolute',
         bottom: 34,
-        // On web, center the tab bar with a fixed width container
-        ...(Platform.OS === 'web'
-            ? { left: 0, right: 0 }
-            : { width: windowWidth }),
+        left: 0,
+        right: 0,
         alignItems: 'center',
         justifyContent: 'center',
         zIndex: 1000,
     },
     glassPill: {
-        width: TAB_WIDTH,
         height: 64,
         borderRadius: 32,
         overflow: 'hidden',
@@ -120,7 +119,6 @@ const styles = StyleSheet.create({
         alignItems: 'center',
     },
     tabItem: {
-        width: ITEM_WIDTH,
         height: '100%',
         justifyContent: 'center',
         alignItems: 'center',
@@ -138,9 +136,7 @@ const styles = StyleSheet.create({
     },
     activeIndicator: {
         position: 'absolute',
-        width: ITEM_WIDTH * 0.8,
         height: '70%',
-        left: ITEM_WIDTH * 0.1,
         backgroundColor: 'rgba(201, 169, 98, 0.15)', // Muted Gold Glow
         borderRadius: 20,
         zIndex: 1,
