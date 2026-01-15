@@ -43,7 +43,7 @@ export default function Hero() {
                     >
                         <div className="flex flex-row items-center gap-4">
                             <button onClick={() => setIsModalOpen(true)} className="btn">Try Key</button>
-                            <a href="https://pump.fun" target="_blank" rel="noopener noreferrer" className="btn btn-secondary">Buy $KEY</a>
+                            <a href="https://pump.fun" target="_blank" rel="noopener noreferrer" className="btn btn-secondary">Buy $PRIVACY</a>
                         </div>
 
                     </motion.div>

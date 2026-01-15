@@ -31,7 +31,7 @@ export default function Footer() {
                 <Link href="/developers">Developers</Link>
                 <a href="https://github.com/SerPepe/KeyApp" target="_blank" rel="noopener noreferrer">Source Code</a>
                 <Link href="/privacy">Privacy Policy</Link>
-                <a href="https://dexscreener.com" target="_blank" rel="noopener noreferrer">$KEY Chart</a>
+                <a href="https://dexscreener.com" target="_blank" rel="noopener noreferrer">$PRIVACY Chart</a>
                 <a href="https://x.com/" target="_blank" rel="noopener noreferrer">Twitter</a>
             </nav>
 

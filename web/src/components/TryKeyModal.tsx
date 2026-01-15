@@ -44,7 +44,7 @@ export default function TryKeyModal({ isOpen, onClose }: TryKeyModalProps) {
                         <div className="modal-options">
                             {/* Apple - Active */}
                             <a
-                                href="https://testflight.apple.com/join/HnPgTkwE"
+                                href="https://apps.apple.com/us/app/key-private-messaging/id6756910042"
                                 target="_blank"
                                 rel="noopener noreferrer"
                                 className="modal-option"
@@ -54,7 +54,7 @@ export default function TryKeyModal({ isOpen, onClose }: TryKeyModalProps) {
                                 </div>
                                 <div className="option-text">
                                     <div className="option-title">iOS / iPad / Mac</div>
-                                    <div className="option-status">Available on TestFlight</div>
+                                    <div className="option-status">Available on App Store</div>
                                 </div>
                             </a>
 
